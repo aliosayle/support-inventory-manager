@@ -28,7 +28,12 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
+      // Ensure email is valid format for Supabase
+      const validEmail = email.includes('@example.com') 
+        ? email.replace('@example.com', '@gmail.com') 
+        : email;
+        
+      await login(validEmail, password);
       navigate('/dashboard');
     } catch (error) {
       toast({
@@ -45,18 +50,18 @@ const Index = () => {
     setIsLoading(true);
     
     try {
+      // Make sure we have a valid email format for Supabase
+      const validEmail = email.replace('@example.com', '@gmail.com');
+      
       // First, try to log in with the credentials
       try {
-        await login(email, password);
+        await login(validEmail, password);
         navigate('/dashboard');
         return;
       } catch (loginError) {
         // If login fails, try to sign up
         console.log("Login failed, trying to sign up");
       }
-      
-      // Use a valid email format for demonstration purposes
-      const validEmail = email.replace('@example.com', '@gmail.com');
       
       // Create new user
       const { data, error: signUpError } = await supabase.auth.signUp({

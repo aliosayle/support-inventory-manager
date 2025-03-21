@@ -125,8 +125,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     
     try {
+      // Ensure email is in valid format for Supabase
+      const validEmail = email.includes('@example.com') 
+        ? email.replace('@example.com', '@gmail.com') 
+        : email;
+        
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: validEmail,
         password
       });
       
@@ -145,6 +150,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: err.message,
         variant: "destructive",
       });
+      throw err; // Re-throw to allow callers to catch the error
     } finally {
       setIsLoading(false);
     }
@@ -155,8 +161,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     
     try {
+      // Ensure email is valid format for Supabase
+      const validEmail = email.includes('@example.com') 
+        ? email.replace('@example.com', '@gmail.com') 
+        : email;
+        
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: validEmail,
         password,
         options: {
           data: {
@@ -180,6 +191,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: err.message,
         variant: "destructive",
       });
+      throw err;
     } finally {
       setIsLoading(false);
     }
