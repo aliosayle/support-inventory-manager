@@ -2,14 +2,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { StockItem } from '@/types';
-import { Plus } from 'lucide-react';
+import { Grid, List, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StockList from '@/components/stock/StockList';
 import { fetchStockItems } from '@/services/stockService';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const Stock = () => {
   const [items, setItems] = useState<StockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   useEffect(() => {
     const loadStockItems = async () => {
@@ -34,15 +36,25 @@ const Stock = () => {
             Manage and track IT department inventory and equipment.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/stock/new">
-            <Plus size={16} className="mr-2" />
-            Add Item
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as 'card' | 'list')}>
+            <ToggleGroupItem value="card" aria-label="Card view">
+              <Grid size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List size={16} />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Button asChild>
+            <Link to="/stock/new">
+              <Plus size={16} className="mr-2" />
+              Add Item
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <StockList items={items} isLoading={isLoading} />
+      <StockList items={items} isLoading={isLoading} viewMode={viewMode} />
     </div>
   );
 };

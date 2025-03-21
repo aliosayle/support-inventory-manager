@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StockItem } from '@/types';
@@ -36,9 +35,10 @@ import { deleteStockItem } from '@/services/stockService';
 interface StockListProps {
   items: StockItem[];
   isLoading?: boolean;
+  viewMode?: 'card' | 'list';
 }
 
-const StockList = ({ items, isLoading = false }: StockListProps) => {
+const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListProps) => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -87,7 +87,6 @@ const StockList = ({ items, isLoading = false }: StockListProps) => {
     setDeletingId(id);
     try {
       await deleteStockItem(id);
-      // The page will reload with updated data from the parent component
     } finally {
       setDeletingId(null);
     }
@@ -107,25 +106,54 @@ const StockList = ({ items, isLoading = false }: StockListProps) => {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="overflow-hidden">
-              <Skeleton className="h-64 w-full" />
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
+        {viewMode === 'card' ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-64 w-full" />
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     );
   }
@@ -168,115 +196,187 @@ const StockList = ({ items, isLoading = false }: StockListProps) => {
               <SelectItem value="disposed">Disposed</SelectItem>
             </SelectContent>
           </Select>
-          <Button asChild>
-            <Link to="/stock/new">
-              <Plus size={16} className="mr-2" />
-              Add Item
-            </Link>
-          </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredItems.length === 0 ? (
-          <div className="col-span-full text-center py-6 text-muted-foreground">
-            No stock items found
-          </div>
-        ) : (
-          filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden transition-all hover:shadow-md">
-              <div className="aspect-square bg-muted relative">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full">
-                    <Package size={64} className="text-muted-foreground/40" />
-                  </div>
-                )}
-                <Badge 
-                  variant="outline" 
-                  className={cn("capitalize absolute top-2 right-2", getStatusColor(item.status))}
-                >
-                  {item.status}
-                </Badge>
-              </div>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-semibold line-clamp-1">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                      {item.category}
-                    </p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-2">
-                        <MoreHorizontal size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to={`/stock/${item.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to={`/stock/${item.id}/edit`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Item</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(item.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {deletingId === item.id ? 'Deleting...' : 'Delete'}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+      {viewMode === 'card' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredItems.length === 0 ? (
+            <div className="col-span-full text-center py-6 text-muted-foreground">
+              No stock items found
+            </div>
+          ) : (
+            filteredItems.map((item) => (
+              <Card key={item.id} className="overflow-hidden transition-all hover:shadow-md">
+                <div className="aspect-square bg-muted relative">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full">
+                      <Package size={64} className="text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <Badge 
+                    variant="outline" 
+                    className={cn("capitalize absolute top-2 right-2", getStatusColor(item.status))}
+                  >
+                    {item.status}
+                  </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4 text-sm">
-                  <div className="text-muted-foreground">Quantity:</div>
-                  <div className="text-right font-medium">{item.quantity}</div>
-                  
-                  <div className="text-muted-foreground">Model:</div>
-                  <div className="text-right font-medium line-clamp-1">{item.model || 'N/A'}</div>
-                  
-                  <div className="text-muted-foreground">Price:</div>
-                  <div className="text-right font-medium">{formatCurrency(item.price)}</div>
-                  
-                  <div className="text-muted-foreground">Purchased:</div>
-                  <div className="text-right font-medium">{formatDate(item.purchaseDate)}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        {item.category}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="-mr-2">
+                          <MoreHorizontal size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link to={`/stock/${item.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/stock/${item.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(item.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4 text-sm">
+                    <div className="text-muted-foreground">Quantity:</div>
+                    <div className="text-right font-medium">{item.quantity}</div>
+                    
+                    <div className="text-muted-foreground">Model:</div>
+                    <div className="text-right font-medium line-clamp-1">{item.model || 'N/A'}</div>
+                    
+                    <div className="text-muted-foreground">Price:</div>
+                    <div className="text-right font-medium">{formatCurrency(item.price)}</div>
+                    
+                    <div className="text-muted-foreground">Purchased:</div>
+                    <div className="text-right font-medium">{formatDate(item.purchaseDate)}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    No stock items found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("capitalize", getStatusColor(item.status))}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{formatCurrency(item.price)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/stock/${item.id}`}>
+                            <Eye size={16} />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/stock/${item.id}/edit`}>
+                            <Edit size={16} />
+                          </Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Trash2 size={16} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(item.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };
