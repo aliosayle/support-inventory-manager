@@ -14,7 +14,10 @@ import { IssueResolutionTime } from '@/components/dashboard/issue-resolution-tim
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarDateRangePicker } from '@/components/dashboard/date-range-picker';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ClipboardList, ShoppingCart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import PurchaseRequestList from '@/components/purchase-request/PurchaseRequestList';
+import DashboardCard from '@/components/dashboard/DashboardCard';
 
 const Dashboard = () => {
   const { user, hasRole } = useAuth();
@@ -27,6 +30,7 @@ const Dashboard = () => {
     avgResolutionTime: 0,
     inventoryItems: 0,
     lowStockItems: 0,
+    pendingPurchaseRequests: 0,
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -68,6 +72,12 @@ const Dashboard = () => {
           .select('*', { count: 'exact', head: true })
           .eq('status', 'repair');
 
+        // Fetch pending purchase requests count
+        const { count: pendingPurchaseRequests } = await supabase
+          .from('purchase_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
         // Calculate average resolution time
         const { data: resolvedIssuesData } = await supabase
           .from('issues')
@@ -95,6 +105,7 @@ const Dashboard = () => {
           avgResolutionTime,
           inventoryItems: inventoryItems || 0,
           lowStockItems: lowStockItems || 0,
+          pendingPurchaseRequests: pendingPurchaseRequests || 0,
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -140,6 +151,9 @@ const Dashboard = () => {
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           {hasRole(['admin', 'employee']) && (
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          )}
+          {hasRole(['admin', 'employee']) && (
+            <TabsTrigger value="requests">Purchase Requests</TabsTrigger>
           )}
         </TabsList>
         
@@ -238,37 +252,15 @@ const Dashboard = () => {
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Resolution Time</CardTitle>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  className="h-4 w-4 text-muted-foreground"
-                >
-                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                </svg>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-[100px]" />
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">
-                      {stats.avgResolutionTime.toFixed(1)} hrs
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      For {stats.resolvedIssues} resolved issues
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <Link to="/purchase-requests" className="block">
+              <DashboardCard
+                title="Pending Purchase Requests"
+                value={stats.pendingPurchaseRequests}
+                icon={ShoppingCart}
+                description="Waiting for approval"
+                variant={stats.pendingPurchaseRequests > 0 ? "warning" : "default"}
+              />
+            </Link>
           </div>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -456,6 +448,21 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+        )}
+        
+        {hasRole(['admin', 'employee']) && (
+          <TabsContent value="requests" className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Pending Purchase Requests</h3>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/purchase-requests">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  View All
+                </Link>
+              </Button>
+            </div>
+            <PurchaseRequestList limit={5} showActions={true} onStatusChange={handleRefresh} />
           </TabsContent>
         )}
       </Tabs>

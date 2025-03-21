@@ -9,6 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 
+interface UserInfo {
+  name: string;
+  phone_number: string | null;
+}
+
 // Helper function to map DB data to frontend model
 const mapDbPurchaseRequests = (data: any[]): PurchaseRequest[] => {
   return data.map(item => ({
@@ -23,7 +28,8 @@ const mapDbPurchaseRequests = (data: any[]): PurchaseRequest[] => {
     notes: item.notes,
     status: item.status as PurchaseRequestStatus,
     createdAt: new Date(item.created_at),
-    updatedAt: new Date(item.updated_at)
+    updatedAt: new Date(item.updated_at),
+    userInfo: item.custom_users as UserInfo
   }));
 };
 
@@ -47,9 +53,15 @@ interface PurchaseRequestListProps {
   limit?: number;
   showActions?: boolean;
   onStatusChange?: () => void;
+  filterStatus?: PurchaseRequestStatus;
 }
 
-const PurchaseRequestList = ({ limit, showActions = false, onStatusChange }: PurchaseRequestListProps) => {
+const PurchaseRequestList = ({ 
+  limit, 
+  showActions = false, 
+  onStatusChange,
+  filterStatus 
+}: PurchaseRequestListProps) => {
   const { user, hasRole } = useAuth();
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,12 +75,17 @@ const PurchaseRequestList = ({ limit, showActions = false, onStatusChange }: Pur
       try {
         let query = supabase
           .from('purchase_requests')
-          .select('*, custom_users(name, email)')
+          .select('*, custom_users(name, phone_number)')
           .order('created_at', { ascending: false });
           
         // If not admin, only fetch user's own requests
         if (!hasRole('admin')) {
           query = query.eq('user_id', user.id);
+        }
+        
+        // Apply filter by status if provided
+        if (filterStatus) {
+          query = query.eq('status', filterStatus);
         }
         
         // Apply limit if provided
@@ -95,7 +112,7 @@ const PurchaseRequestList = ({ limit, showActions = false, onStatusChange }: Pur
     };
     
     fetchRequests();
-  }, [user, hasRole, limit]);
+  }, [user, hasRole, limit, filterStatus]);
 
   const handleStatusChange = async (id: string, status: PurchaseRequestStatus) => {
     if (!hasRole('admin')) return;
@@ -176,6 +193,14 @@ const PurchaseRequestList = ({ limit, showActions = false, onStatusChange }: Pur
               <CardTitle className="text-lg">{request.itemName}</CardTitle>
               <div className="text-sm text-muted-foreground">
                 BON #{request.bonNumber} • {formatDistanceToNow(request.createdAt, { addSuffix: true })}
+                {request.userInfo && (
+                  <div className="mt-1 font-medium">
+                    Requested by: {request.userInfo.name}
+                    {request.userInfo.phone_number && (
+                      <span className="ml-2">• {request.userInfo.phone_number}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {getStatusBadge(request.status)}

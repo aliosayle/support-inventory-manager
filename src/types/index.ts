@@ -1,11 +1,10 @@
-
 export type UserRole = 'admin' | 'employee' | 'user';
 
 export type IssueSeverity = 'low' | 'medium' | 'high';
 export type IssueType = 'hardware' | 'software' | 'network';
 export type IssueStatus = 'submitted' | 'in-progress' | 'resolved' | 'escalated';
 export type StockStatus = 'available' | 'in-use' | 'repair' | 'disposed';
-export type PurchaseRequestStatus = 'pending' | 'approved' | 'rejected' | 'purchased';
+export type PurchaseRequestStatus = 'pending' | 'approved' | 'purchased' | 'rejected';
 
 export interface User {
   id: string;
@@ -88,6 +87,10 @@ export interface PurchaseRequest {
   status: PurchaseRequestStatus;
   createdAt: Date;
   updatedAt: Date;
+  userInfo?: {
+    name: string;
+    phone_number: string | null;
+  };
 }
 
 export interface DashboardStats {
