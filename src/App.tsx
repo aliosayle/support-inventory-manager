@@ -12,6 +12,7 @@ import Issues from "./pages/issues/Issues";
 import NewIssue from "./pages/issues/NewIssue";
 import Stock from "./pages/stock/Stock";
 import Users from "./pages/users/Users";
+import NewUser from "./pages/users/NewUser";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/issues/new" element={<NewIssue />} />
               <Route path="/stock" element={<Stock />} />
               <Route path="/users" element={<Users />} />
+              <Route path="/users/new" element={<NewUser />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

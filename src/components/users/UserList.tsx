@@ -22,12 +22,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Filter, MoreHorizontal, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UserListProps {
   users: User[];
+  isLoading?: boolean;
 }
 
-const UserList = ({ users }: UserListProps) => {
+const UserList = ({ users, isLoading = false }: UserListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredUsers = users.filter(user => 
@@ -60,6 +62,22 @@ const UserList = ({ users }: UserListProps) => {
       year: 'numeric'
     }).format(new Date(date));
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-[200px]" />
+          <Skeleton className="h-10 w-[100px]" />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -134,7 +152,7 @@ const UserList = ({ users }: UserListProps) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    {formatDate(user.createdAt)}
+                    {formatDate(user.created_at)}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

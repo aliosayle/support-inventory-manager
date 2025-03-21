@@ -1,9 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Issue, IssueSeverity, IssueType, User } from '@/types';
-import { getUsersByRole } from '@/utils/mockData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,10 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface IssueFormProps {
   issue?: Issue;
-  onSubmit: (issueData: Partial<Issue>) => void;
+  onSubmit: (issueData: Partial<Issue>) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -31,13 +32,49 @@ const IssueForm = ({ issue, onSubmit, isLoading = false }: IssueFormProps) => {
   const [description, setDescription] = useState(issue?.description || '');
   const [severity, setSeverity] = useState<IssueSeverity>(issue?.severity || 'medium');
   const [type, setType] = useState<IssueType>(issue?.type || 'software');
-  const [assignedTo, setAssignedTo] = useState<string | undefined>(issue?.assignedTo);
-  
-  const employees = getUsersByRole('employee');
-  const admins = getUsersByRole('admin');
-  const possibleAssignees = [...employees, ...admins];
+  const [assignedTo, setAssignedTo] = useState<string | undefined>(issue?.assigned_to);
+  const [possibleAssignees, setPossibleAssignees] = useState<User[]>([]);
+  const [loadingAssignees, setLoadingAssignees] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Fetch employees and admins who can be assigned issues
+    const fetchAssignees = async () => {
+      if (hasRole(['admin'])) {
+        setLoadingAssignees(true);
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('role', ['admin', 'employee'])
+            .order('name');
+          
+          if (error) {
+            throw error;
+          }
+          
+          const transformed: User[] = data.map(user => ({
+            ...user,
+            created_at: new Date(user.created_at)
+          }));
+          
+          setPossibleAssignees(transformed);
+        } catch (error: any) {
+          console.error('Error fetching assignees:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load assignees",
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingAssignees(false);
+        }
+      }
+    };
+    
+    fetchAssignees();
+  }, [hasRole]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title || !description) {
@@ -54,14 +91,14 @@ const IssueForm = ({ issue, onSubmit, isLoading = false }: IssueFormProps) => {
       description,
       severity,
       type,
-      submittedBy: user?.id || issue?.submittedBy || '',
+      submitted_by: user?.id || issue?.submitted_by || '',
     };
     
     if (hasRole(['admin', 'employee']) && assignedTo) {
-      issueData.assignedTo = assignedTo;
+      issueData.assigned_to = assignedTo;
     }
     
-    onSubmit(issueData);
+    await onSubmit(issueData);
   };
 
   return (
@@ -119,22 +156,26 @@ const IssueForm = ({ issue, onSubmit, isLoading = false }: IssueFormProps) => {
               {hasRole(['admin']) && (
                 <div className="space-y-2">
                   <Label htmlFor="assignedTo">Assign To</Label>
-                  <Select
-                    value={assignedTo || ''}
-                    onValueChange={setAssignedTo}
-                  >
-                    <SelectTrigger id="assignedTo">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {possibleAssignees.map((employee: User) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {loadingAssignees ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select
+                      value={assignedTo || ''}
+                      onValueChange={setAssignedTo}
+                    >
+                      <SelectTrigger id="assignedTo">
+                        <SelectValue placeholder="Select assignee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Unassigned</SelectItem>
+                        {possibleAssignees.map((employee: User) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               )}
             </div>

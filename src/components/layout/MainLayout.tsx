@@ -56,7 +56,7 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
 
   // Auth check
   if (requireAuth && !isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }
 
   // Role check
@@ -65,12 +65,12 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
   }
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full bg-background">
       {isAuthenticated && <Sidebar isOpen={isSidebarOpen} />}
       <div
         className={cn(
           "flex flex-col flex-1 transition-all duration-300",
-          isSidebarOpen ? "ml-0 md:ml-64" : "ml-0 md:ml-16"
+          isSidebarOpen ? "md:ml-64" : "md:ml-16"
         )}
       >
         <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />

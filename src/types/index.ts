@@ -4,6 +4,7 @@ export type UserRole = 'admin' | 'employee' | 'user';
 export type IssueSeverity = 'low' | 'medium' | 'high';
 export type IssueType = 'hardware' | 'software' | 'network';
 export type IssueStatus = 'submitted' | 'in-progress' | 'resolved' | 'escalated';
+export type StockStatus = 'available' | 'in-use' | 'repair' | 'disposed';
 
 export interface User {
   id: string;
@@ -12,31 +13,30 @@ export interface User {
   role: UserRole;
   department?: string;
   avatar?: string;
-  createdAt: Date;
+  created_at: Date;
 }
 
 export interface Issue {
   id: string;
   title: string;
   description: string;
-  submittedBy: string; // User ID
-  assignedTo?: string; // User ID (Employee or Admin)
+  submitted_by: string; // User ID
+  assigned_to?: string; // User ID (Employee or Admin)
   severity: IssueSeverity;
   type: IssueType;
   status: IssueStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  resolvedAt?: Date;
+  created_at: Date;
+  updated_at: Date;
+  resolved_at?: Date;
   comments?: IssueComment[];
-  relatedStockItems?: string[]; // Stock item IDs
 }
 
 export interface IssueComment {
   id: string;
-  issueId: string;
-  userId: string;
+  issue_id: string;
+  user_id: string;
   text: string;
-  createdAt: Date;
+  created_at: Date;
 }
 
 export interface StockItem {
@@ -47,22 +47,27 @@ export interface StockItem {
   quantity: number;
   manufacturer?: string;
   model?: string;
-  serialNumber?: string;
-  purchaseDate?: Date;
+  serial_number?: string;
+  purchase_date?: Date;
   price?: number;
   location?: string;
-  status: 'available' | 'in-use' | 'repair' | 'disposed';
+  status: StockStatus;
   image?: string;
 }
 
 export interface StockUsage {
   id: string;
-  stockItemId: string;
-  issueId?: string;
+  stock_item_id: string;
+  issue_id?: string;
   quantity: number;
-  assignedTo?: string; // User ID
+  assigned_to?: string; // User ID
   date: Date;
   notes?: string;
+}
+
+export interface IssueStockItem {
+  issue_id: string;
+  stock_item_id: string;
 }
 
 export interface DashboardStats {
