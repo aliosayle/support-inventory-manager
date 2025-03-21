@@ -23,7 +23,7 @@ const Issues = () => {
         // Filter issues based on user role
         if (!hasRole(['admin'])) {
           if (hasRole(['employee'])) {
-            // Employee sees assigned issues
+            // Employee sees only assigned issues
             query = query.eq('assigned_to', user.id);
           } else {
             // Regular user sees submitted issues

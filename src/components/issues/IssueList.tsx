@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Issue, IssueStatus } from '@/types';
+import { Issue, IssueStatus, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,11 +33,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MoreHorizontal, Plus, Search } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, UserCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { mapDbIssues } from '@/utils/dataMapping';
+import { mapDbIssues, mapDbUsers } from '@/utils/dataMapping';
+import { toast } from '@/components/ui/use-toast';
 
 interface IssueListProps {
   issues?: Issue[];
@@ -57,6 +63,7 @@ const getStatusColor = (status: IssueStatus) => {
 const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: propIsLoading }) => {
   const { user, hasRole } = useAuth();
   const [issues, setIssues] = useState<Issue[]>(propIssues || []);
+  const [employees, setEmployees] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(propIsLoading || false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -70,14 +77,46 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
     }
   }, [propIssues]);
 
+  useEffect(() => {
+    // Fetch employees only if user is admin
+    if (hasRole(['admin'])) {
+      fetchEmployees();
+    }
+  }, [hasRole]);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('custom_users')
+        .select('*')
+        .eq('role', 'employee');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setEmployees(mapDbUsers(data));
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   const fetchIssues = async () => {
     setIsLoading(true);
     try {
       let query = supabase.from('issues').select('*');
       
       // If user is not admin or employee, only show their issues
-      if (user && !hasRole(['admin', 'employee'])) {
-        query = query.eq('submitted_by', user.id);
+      if (user && !hasRole(['admin'])) {
+        if (hasRole(['employee'])) {
+          // Employee sees only assigned issues
+          query = query.eq('assigned_to', user.id);
+        } else {
+          // Regular user sees submitted issues
+          query = query.eq('submitted_by', user.id);
+        }
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -113,8 +152,60 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
           ? { ...issue, status: newStatus, updatedAt: new Date() } 
           : issue
       ));
+
+      toast({
+        title: "Status Updated",
+        description: `Issue status changed to ${newStatus}`,
+      });
     } catch (error) {
       console.error('Error updating issue status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update issue status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignIssue = async (issueId: string, employeeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('issues')
+        .update({ 
+          assigned_to: employeeId,
+          updated_at: new Date().toISOString(),
+          status: 'in-progress' // Automatically set to in-progress when assigned
+        })
+        .eq('id', issueId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setIssues(issues.map(issue => 
+        issue.id === issueId 
+          ? { 
+              ...issue, 
+              assignedTo: employeeId, 
+              updatedAt: new Date(),
+              status: 'in-progress'
+            } 
+          : issue
+      ));
+
+      const assignedEmployee = employees.find(emp => emp.id === employeeId);
+      toast({
+        title: "Issue Assigned",
+        description: `Issue assigned to ${assignedEmployee?.name || 'employee'} and marked as in-progress`,
+      });
+    } catch (error) {
+      console.error('Error assigning issue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign issue",
+        variant: "destructive",
+      });
     }
   };
 
@@ -181,15 +272,15 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         </TabsList>
         
         <TabsContent value="all" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
         </TabsContent>
         
         <TabsContent value="mine" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
         </TabsContent>
         
         <TabsContent value="assigned" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
         </TabsContent>
       </Tabs>
     </div>
@@ -199,7 +290,10 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
 const renderIssueList = (
   issues: Issue[], 
   isLoading: boolean, 
-  handleStatusChange: (id: string, status: IssueStatus) => void
+  handleStatusChange: (id: string, status: IssueStatus) => void,
+  handleAssignIssue: (id: string, employeeId: string) => void,
+  employees: User[],
+  hasRole: (roles: string[]) => boolean
 ) => {
   if (isLoading) {
     return (
@@ -256,6 +350,34 @@ const renderIssueList = (
                   <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'escalated')}>
                     Escalated
                   </DropdownMenuItem>
+                  
+                  {hasRole(['admin']) && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <UserCircle className="mr-2 h-4 w-4" />
+                          <span>Assign to Employee</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            {employees.length > 0 ? (
+                              employees.map(employee => (
+                                <DropdownMenuItem 
+                                  key={employee.id}
+                                  onClick={() => handleAssignIssue(issue.id, employee.id)}
+                                >
+                                  {employee.name}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>No employees found</DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
