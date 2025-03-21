@@ -24,6 +24,11 @@ const NewIssue = () => {
       // Convert frontend Issue to database issue format
       const dbIssueData = mapIssueToDbIssue(newIssueData);
       
+      // Ensure required fields are present
+      if (!dbIssueData.description || !dbIssueData.submitted_by || !dbIssueData.title || !dbIssueData.type) {
+        throw new Error("Missing required issue fields");
+      }
+      
       // Create the new issue in the database
       const { data, error } = await supabase
         .from('issues')

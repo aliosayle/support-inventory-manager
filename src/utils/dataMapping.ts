@@ -52,6 +52,7 @@ export const mapIssueToDbIssue = (issue: Partial<Issue>): Record<string, any> =>
   if (issue.updatedAt !== undefined) dbIssue.updated_at = issue.updatedAt;
   if (issue.resolvedAt !== undefined) dbIssue.resolved_at = issue.resolvedAt;
   
+  // Make sure to return a typed object that matches Supabase's expectations
   return dbIssue;
 };
 
