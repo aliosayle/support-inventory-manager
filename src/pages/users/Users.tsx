@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import UserList from '@/components/users/UserList';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { mapDbUsers } from '@/utils/dataMapping';
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -32,10 +33,8 @@ const Users = () => {
           throw error;
         }
         
-        const transformedUsers: User[] = data.map(user => ({
-          ...user,
-          created_at: new Date(user.created_at)
-        }));
+        // Transform the data using our mapping utility
+        const transformedUsers = mapDbUsers(data);
         
         setUsers(transformedUsers);
       } catch (error: any) {

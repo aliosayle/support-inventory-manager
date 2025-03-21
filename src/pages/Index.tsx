@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 const Index = () => {
   const { login, isAuthenticated } = useAuth();
@@ -38,7 +41,7 @@ const Index = () => {
     }
   };
 
-  const createDemoUserIfNeeded = async (email: string, password: string, name: string, role: string, department?: string) => {
+  const createDemoUserIfNeeded = async (email: string, password: string, name: string, role: UserRole, department?: string) => {
     setIsLoading(true);
     
     try {

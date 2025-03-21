@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User } from '@/types';
@@ -152,7 +151,7 @@ const UserList = ({ users, isLoading = false }: UserListProps) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    {formatDate(user.created_at)}
+                    {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

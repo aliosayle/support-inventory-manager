@@ -1,4 +1,3 @@
-
 import { User, Issue, StockItem, IssueSeverity, IssueType, IssueStatus, UserRole } from '@/types';
 
 // Users
@@ -126,7 +125,6 @@ export const issues: Issue[] = [
     status: 'submitted',
     createdAt: new Date('2023-06-03T14:10:00'),
     updatedAt: new Date('2023-06-03T14:10:00'),
-    relatedStockItems: ['3'],
   },
   {
     id: '5',

@@ -2,56 +2,57 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Issue } from '@/types';
-import { issues, updateIssue, getIssuesByAssignee, getIssuesBySubmitter } from '@/utils/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import IssueList from '@/components/issues/IssueList';
 import { toast } from '@/components/ui/use-toast';
+import { mapDbIssues } from '@/utils/dataMapping';
 
 const Issues = () => {
   const { user, hasRole } = useAuth();
   const [displayedIssues, setDisplayedIssues] = useState<Issue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      let userIssues: Issue[];
+    const fetchIssues = async () => {
+      if (!user) return;
       
-      if (hasRole('admin')) {
-        // Admin sees all issues
-        userIssues = issues;
-      } else if (hasRole('employee')) {
-        // Employee sees assigned issues
-        userIssues = getIssuesByAssignee(user.id);
-      } else {
-        // User sees submitted issues
-        userIssues = getIssuesBySubmitter(user.id);
+      setIsLoading(true);
+      try {
+        let query = supabase.from('issues').select('*');
+        
+        // Filter issues based on user role
+        if (!hasRole(['admin'])) {
+          if (hasRole(['employee'])) {
+            // Employee sees assigned issues
+            query = query.eq('assigned_to', user.id);
+          } else {
+            // Regular user sees submitted issues
+            query = query.eq('submitted_by', user.id);
+          }
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Map database issues to frontend format
+        const mappedIssues = mapDbIssues(data || []);
+        setDisplayedIssues(mappedIssues);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch issues",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      setDisplayedIssues(userIssues);
-    }
+    };
+    
+    fetchIssues();
   }, [user, hasRole]);
-
-  const handleUpdateStatus = (issueId: string, status: string) => {
-    try {
-      updateIssue(issueId, { status: status as any });
-      
-      // Update UI
-      setDisplayedIssues(prev => 
-        prev.map(issue => 
-          issue.id === issueId ? { ...issue, status: status as any } : issue
-        )
-      );
-      
-      toast({
-        title: "Status Updated",
-        description: `Issue has been marked as ${status}.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update issue status.",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -66,10 +67,7 @@ const Issues = () => {
         </p>
       </div>
 
-      <IssueList 
-        issues={displayedIssues} 
-        onUpdateStatus={handleUpdateStatus} 
-      />
+      <IssueList issues={displayedIssues} isLoading={isLoading} />
     </div>
   );
 };
