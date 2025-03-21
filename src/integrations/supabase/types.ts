@@ -200,6 +200,51 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_requests: {
+        Row: {
+          bon_number: string
+          bon_signer: string
+          created_at: string
+          estimated_price: number | null
+          id: string
+          item_description: string | null
+          item_name: string
+          item_quantity: number
+          notes: string | null
+          status: Database["public"]["Enums"]["purchase_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bon_number: string
+          bon_signer: string
+          created_at?: string
+          estimated_price?: number | null
+          id?: string
+          item_description?: string | null
+          item_name: string
+          item_quantity?: number
+          notes?: string | null
+          status?: Database["public"]["Enums"]["purchase_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bon_number?: string
+          bon_signer?: string
+          created_at?: string
+          estimated_price?: number | null
+          id?: string
+          item_description?: string | null
+          item_name?: string
+          item_quantity?: number
+          notes?: string | null
+          status?: Database["public"]["Enums"]["purchase_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stock_items: {
         Row: {
           category: string
@@ -304,6 +349,7 @@ export type Database = {
       issue_severity: "low" | "medium" | "high"
       issue_status: "submitted" | "in-progress" | "resolved" | "escalated"
       issue_type: "hardware" | "software" | "network"
+      purchase_request_status: "pending" | "approved" | "rejected" | "purchased"
       stock_status: "available" | "in-use" | "repair" | "disposed"
       user_role: "admin" | "employee" | "user"
     }

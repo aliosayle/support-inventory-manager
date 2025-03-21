@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Issue, DashboardStats } from '@/types';
@@ -9,11 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInHours } from 'date-fns';
+import PurchaseRequestList from '@/components/purchase-request/PurchaseRequestList';
 
 const Dashboard = () => {
   const { user, hasRole } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,6 +39,14 @@ const Dashboard = () => {
           .lt('quantity', 3);
         
         if (stockError) throw stockError;
+        
+        // Fetch pending purchase requests count
+        const { data: pendingRequestsData, error: pendingRequestsError } = await supabase
+          .from('purchase_requests')
+          .select('id')
+          .eq('status', 'pending');
+        
+        if (pendingRequestsError) throw pendingRequestsError;
         
         // Map to frontend format
         const issues = mapDbIssues(issuesData || []);
@@ -95,6 +106,9 @@ const Dashboard = () => {
           lowStockItems: stockData?.length || 0,
           recentIssues
         });
+        
+        // Set pending purchase requests count
+        setPendingRequests(pendingRequestsData?.length || 0);
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
         toast({
@@ -145,7 +159,7 @@ const Dashboard = () => {
       </div>
       
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Issues</CardTitle>
@@ -185,13 +199,24 @@ const Dashboard = () => {
             <div className="text-2xl font-bold">{stats.lowStockItems}</div>
           </CardContent>
         </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Purchase Requests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingRequests}</div>
+            <div className="text-xs text-muted-foreground">Pending approval</div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Tabbed Content */}
-      <Tabs defaultValue="recent">
+      <Tabs defaultValue="recent" className="space-y-4">
         <TabsList>
           <TabsTrigger value="recent">Recent Issues</TabsTrigger>
           <TabsTrigger value="my-issues">My Issues</TabsTrigger>
+          {hasRole('admin') && <TabsTrigger value="purchase-requests">Purchase Requests</TabsTrigger>}
         </TabsList>
         
         {/* Recent Issues */}
@@ -213,6 +238,13 @@ const Dashboard = () => {
             </Card>
           )}
         </TabsContent>
+        
+        {/* Purchase Requests (for admins) */}
+        {hasRole('admin') && (
+          <TabsContent value="purchase-requests" className="space-y-4">
+            <PurchaseRequestList limit={5} showActions />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

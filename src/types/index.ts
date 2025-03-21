@@ -1,10 +1,10 @@
-
 export type UserRole = 'admin' | 'employee' | 'user';
 
 export type IssueSeverity = 'low' | 'medium' | 'high';
 export type IssueType = 'hardware' | 'software' | 'network';
 export type IssueStatus = 'submitted' | 'in-progress' | 'resolved' | 'escalated';
 export type StockStatus = 'available' | 'in-use' | 'repair' | 'disposed';
+export type PurchaseRequestStatus = 'pending' | 'approved' | 'rejected' | 'purchased';
 
 export interface User {
   id: string;
@@ -71,6 +71,21 @@ export interface StockUsage {
 export interface IssueStockItem {
   issueId: string;
   stockItemId: string;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  userId: string;
+  bonNumber: string;
+  bonSigner: string;
+  itemName: string;
+  itemDescription?: string;
+  itemQuantity: number;
+  estimatedPrice?: number;
+  notes?: string;
+  status: PurchaseRequestStatus;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DashboardStats {
