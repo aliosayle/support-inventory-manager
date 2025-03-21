@@ -220,7 +220,7 @@ const IssueList: React.FC<IssueListProps> = ({
       
       <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab}>
         <TabsList>
-          <TabsTrigger value="all">All Issues</TabsTrigger>
+          {hasRole(['admin']) && <TabsTrigger value="all">All Issues</TabsTrigger>}
           <TabsTrigger value="mine">My Issues</TabsTrigger>
           {hasRole(['admin', 'employee']) && (
             <TabsTrigger value="assigned">Assigned to Me</TabsTrigger>
@@ -228,7 +228,7 @@ const IssueList: React.FC<IssueListProps> = ({
         </TabsList>
         
         <TabsContent value={currentTab} className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']), hasRole(['employee']), user?.id)}
         </TabsContent>
       </Tabs>
     </div>
@@ -241,7 +241,9 @@ const renderIssueList = (
   handleStatusChange: (id: string, status: IssueStatus) => void,
   handleAssignIssue: (id: string, employeeId: string) => void,
   employees: User[],
-  isAdmin: boolean
+  isAdmin: boolean,
+  isEmployee: boolean,
+  userId?: string
 ) => {
   if (isLoading) {
     return (
@@ -299,20 +301,26 @@ const renderIssueList = (
                   <DropdownMenuItem asChild>
                     <Link to={`/issues/${issue.id}`}>View Details</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'submitted')}>
-                    Submitted
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'in-progress')}>
-                    In Progress
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'resolved')}>
-                    Resolved
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'escalated')}>
-                    Escalated
-                  </DropdownMenuItem>
+                  
+                  {/* Only show status change options for admins or employees (who don't own the issue) */}
+                  {(isAdmin || (isEmployee && issue.submittedBy !== userId)) && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'submitted')}>
+                        Submitted
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'in-progress')}>
+                        In Progress
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'resolved')}>
+                        Resolved
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'escalated')}>
+                        Escalated
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   
                   {isAdmin && (
                     <>

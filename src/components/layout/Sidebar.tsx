@@ -2,7 +2,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { NavLink } from 'react-router-dom';
-import { Home, ClipboardList, Package, Users, BarChart, ShoppingCart, LogOut } from 'lucide-react';
+import { ClipboardList, Package, Users, BarChart, ShoppingCart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -67,7 +67,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const { hasRole, logout } = useAuth();
   
   const adminLinks = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard' },
+    { to: '/dashboard', icon: BarChart, label: 'Dashboard' },
     { to: '/issues', icon: ClipboardList, label: 'Issues' },
     { to: '/stock', icon: Package, label: 'Stock' },
     { to: '/users', icon: Users, label: 'Users' },
@@ -76,14 +76,13 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   ];
   
   const employeeLinks = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard' },
+    { to: '/dashboard', icon: BarChart, label: 'Dashboard' },
     { to: '/issues', icon: ClipboardList, label: 'Issues' },
     { to: '/stock', icon: Package, label: 'Stock' },
     { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests' },
   ];
   
   const userLinks = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard' },
     { to: '/issues', icon: ClipboardList, label: 'Issues' },
     { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests' },
   ];
