@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StockItem } from '@/types';
-import { Edit, Eye, Filter, MoreHorizontal, Package, Plus } from 'lucide-react';
+import { Edit, Eye, Filter, MoreHorizontal, Package, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,21 +29,26 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { deleteStockItem } from '@/services/stockService';
 
 interface StockListProps {
   items: StockItem[];
+  isLoading?: boolean;
 }
 
-const StockList = ({ items }: StockListProps) => {
+const StockList = ({ items, isLoading = false }: StockListProps) => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredItems = items.filter(item => {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.description.toLowerCase().includes(searchTerm.toLowerCase());
+                          (item.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     
     return matchesCategory && matchesStatus && matchesSearch;
   });
@@ -77,6 +82,53 @@ const StockList = ({ items }: StockListProps) => {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await deleteStockItem(id);
+      // The page will reload with updated data from the parent component
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 items-center gap-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-10" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="h-64 w-full" />
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -132,7 +184,7 @@ const StockList = ({ items }: StockListProps) => {
           </div>
         ) : (
           filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden transition-all hover:shadow-md animate-zoom-in">
+            <Card key={item.id} className="overflow-hidden transition-all hover:shadow-md">
               <div className="aspect-square bg-muted relative">
                 {item.image ? (
                   <img
@@ -179,6 +231,31 @@ const StockList = ({ items }: StockListProps) => {
                           Edit
                         </Link>
                       </DropdownMenuItem>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(item.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

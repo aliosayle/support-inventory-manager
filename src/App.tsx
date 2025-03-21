@@ -11,13 +11,23 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Issues from "./pages/issues/Issues";
 import NewIssue from "./pages/issues/NewIssue";
 import Stock from "./pages/stock/Stock";
+import StockDetail from "./pages/stock/StockDetail";
+import NewStock from "./pages/stock/NewStock";
+import EditStock from "./pages/stock/EditStock";
 import Users from "./pages/users/Users";
 import NewUser from "./pages/users/NewUser";
 import Reports from "./pages/reports/Reports";
 import KnowledgeBase from "./pages/knowledge/KnowledgeBase";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -34,6 +44,9 @@ const App = () => (
               <Route path="/issues" element={<Issues />} />
               <Route path="/issues/new" element={<NewIssue />} />
               <Route path="/stock" element={<Stock />} />
+              <Route path="/stock/:id" element={<StockDetail />} />
+              <Route path="/stock/new" element={<NewStock />} />
+              <Route path="/stock/:id/edit" element={<EditStock />} />
               <Route path="/users" element={<Users />} />
               <Route path="/users/new" element={<NewUser />} />
               <Route path="/reports" element={<Reports />} />
