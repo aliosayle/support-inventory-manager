@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,8 +32,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const PurchaseRequestForm = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      refreshProfile();
+    }
+  }, [user, refreshProfile]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -62,6 +67,8 @@ const PurchaseRequestForm = () => {
     setIsSubmitting(true);
 
     try {
+      console.log('Submitting purchase request for user ID:', user.id);
+      
       const { error } = await supabase.from('purchase_requests').insert({
         user_id: user.id,
         bon_number: data.bonNumber,
@@ -74,7 +81,10 @@ const PurchaseRequestForm = () => {
         status: 'pending',
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
 
       toast({
         title: 'Purchase request submitted',
@@ -221,6 +231,12 @@ const PurchaseRequestForm = () => {
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? 'Submitting...' : 'Submit Purchase Request'}
             </Button>
+            
+            {!user && (
+              <div className="p-4 border border-yellow-300 bg-yellow-50 text-yellow-800 rounded mt-4">
+                You must be logged in to submit a purchase request. Please log in and try again.
+              </div>
+            )}
           </form>
         </Form>
       </CardContent>
