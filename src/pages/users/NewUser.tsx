@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@/types';
 import UserForm from '@/components/users/UserForm';
@@ -12,11 +12,17 @@ const NewUser = () => {
   const { hasRole } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if not admin
-  if (!hasRole('admin')) {
-    navigate('/dashboard');
-    return null;
-  }
+  // Redirect if not admin or employee
+  useEffect(() => {
+    if (!hasRole(['admin', 'employee'])) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create users.",
+        variant: "destructive",
+      });
+      navigate('/dashboard');
+    }
+  }, [hasRole, navigate]);
 
   const handleSubmit = async (userData: Partial<User> & { password?: string }) => {
     setIsLoading(true);
@@ -34,7 +40,10 @@ const NewUser = () => {
           password_hash: passwordHash,
           name: userData.name,
           role: userData.role,
-          department: userData.department
+          department: userData.department,
+          company: userData.company,
+          site: userData.site,
+          phone_number: userData.phoneNumber
         });
       
       if (error) {

@@ -12,6 +12,9 @@ export interface User {
   email: string;
   role: UserRole;
   department?: string;
+  company?: string;
+  site?: string;
+  phoneNumber?: string;
   avatar?: string;
   createdAt: Date;
 }

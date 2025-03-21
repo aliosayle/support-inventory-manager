@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface UserFormProps {
   user?: User;
@@ -28,6 +27,9 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
   const [email, setEmail] = useState(user?.email || '');
   const [role, setRole] = useState<UserRole>(user?.role || 'user');
   const [department, setDepartment] = useState(user?.department || '');
+  const [company, setCompany] = useState(user?.company || '');
+  const [site, setSite] = useState(user?.site || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -58,6 +60,9 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
       email,
       role,
       department: department || undefined,
+      company: company || undefined,
+      site: site || undefined,
+      phoneNumber: phoneNumber || undefined,
     };
     
     if (!user) {
@@ -99,20 +104,34 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
             
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select
-                  value={role}
-                  onValueChange={(value) => setRole(value as UserRole)}
-                >
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Company name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="site">Site</Label>
+                <Input
+                  id="site"
+                  value={site}
+                  onChange={(e) => setSite(e.target.value)}
+                  placeholder="Site location"
+                />
+              </div>
+            </div>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Phone number"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
@@ -123,6 +142,23 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
                   placeholder="e.g. Marketing, IT, Finance"
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={role}
+                onValueChange={(value) => setRole(value as UserRole)}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {!user && (

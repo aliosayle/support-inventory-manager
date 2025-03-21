@@ -12,33 +12,42 @@ export type Database = {
       custom_users: {
         Row: {
           avatar: string | null
+          company: string | null
           created_at: string
           department: string | null
           email: string
           id: string
           name: string
           password_hash: string
+          phone_number: string | null
           role: string
+          site: string | null
         }
         Insert: {
           avatar?: string | null
+          company?: string | null
           created_at?: string
           department?: string | null
           email: string
           id?: string
           name: string
           password_hash: string
+          phone_number?: string | null
           role?: string
+          site?: string | null
         }
         Update: {
           avatar?: string | null
+          company?: string | null
           created_at?: string
           department?: string | null
           email?: string
           id?: string
           name?: string
           password_hash?: string
+          phone_number?: string | null
           role?: string
+          site?: string | null
         }
         Relationships: []
       }
