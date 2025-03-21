@@ -225,8 +225,8 @@ const IssueList: React.FC<IssueListProps> = ({
           )}
         </TabsList>
         
-        {/* Render content only once */}
-        <TabsContent className="mt-6">
+        {/* Fix: Add value prop to TabsContent */}
+        <TabsContent value={currentTab} className="mt-6">
           {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
       </Tabs>
