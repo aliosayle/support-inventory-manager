@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +35,42 @@ type FormValues = z.infer<typeof formSchema>;
 const PurchaseRequestForm = () => {
   const { user, refreshProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customUserFetched, setCustomUserFetched] = useState(false);
+  const [customUserId, setCustomUserId] = useState<string | null>(null);
+
+  // Fetch custom_users ID that matches the authenticated user's email
+  useEffect(() => {
+    const fetchCustomUser = async () => {
+      if (user && !customUserFetched) {
+        try {
+          console.log("Fetching custom user for email:", user.email);
+          const { data, error } = await supabase
+            .from('custom_users')
+            .select('id')
+            .eq('email', user.email)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching custom user:', error);
+            return;
+          }
+
+          if (data) {
+            console.log("Found custom user with ID:", data.id);
+            setCustomUserId(data.id);
+          } else {
+            console.log("No custom user found for email:", user.email);
+          }
+        } catch (err) {
+          console.error('Error in fetchCustomUser:', err);
+        } finally {
+          setCustomUserFetched(true);
+        }
+      }
+    };
+
+    fetchCustomUser();
+  }, [user, customUserFetched]);
 
   useEffect(() => {
     if (!user) {
@@ -64,13 +101,22 @@ const PurchaseRequestForm = () => {
       return;
     }
 
+    if (!customUserId) {
+      toast({
+        title: 'User profile not found',
+        description: 'Your user profile is not properly set up in the system',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      console.log('Submitting purchase request for user ID:', user.id);
+      console.log('Submitting purchase request for custom user ID:', customUserId);
       
       const { error } = await supabase.from('purchase_requests').insert({
-        user_id: user.id,
+        user_id: customUserId,
         bon_number: data.bonNumber,
         bon_signer: data.bonSigner,
         item_name: data.itemName,
@@ -235,6 +281,12 @@ const PurchaseRequestForm = () => {
             {!user && (
               <div className="p-4 border border-yellow-300 bg-yellow-50 text-yellow-800 rounded mt-4">
                 You must be logged in to submit a purchase request. Please log in and try again.
+              </div>
+            )}
+            
+            {user && !customUserId && customUserFetched && (
+              <div className="p-4 border border-red-300 bg-red-50 text-red-800 rounded mt-4">
+                Your user profile could not be found in the system. Please contact the administrator.
               </div>
             )}
           </form>

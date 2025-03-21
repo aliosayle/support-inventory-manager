@@ -1,418 +1,460 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { issues, getIssuesByStatus, getIssuesByType } from '@/utils/mockData';
-import { DashboardStats } from '@/types';
-import DashboardCard from '@/components/dashboard/DashboardCard';
-import { 
-  LineChart, BarChart, CalendarDays, 
-  CheckCircle2, Clock, Package, PackageOpen, 
-  ShoppingCart, AlertTriangle, 
-  FileWarning, Database
-} from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PurchaseRequestList from '@/components/purchase-request/PurchaseRequestList';
+import { Overview } from '@/components/dashboard/overview';
+import { RecentIssues } from '@/components/dashboard/recent-issues';
+import { InventoryStatus } from '@/components/dashboard/inventory-status';
+import { IssuesByType } from '@/components/dashboard/issues-by-type';
+import { IssuesByStatus } from '@/components/dashboard/issues-by-status';
+import { IssuesByDepartment } from '@/components/dashboard/issues-by-department';
+import { IssueResolutionTime } from '@/components/dashboard/issue-resolution-time';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CalendarDateRangePicker } from '@/components/dashboard/date-range-picker';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { user, hasRole } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalIssues: 0,
+    openIssues: 0,
+    resolvedIssues: 0,
+    criticalIssues: 0,
+    avgResolutionTime: 0,
+    inventoryItems: 0,
+    lowStockItems: 0,
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
       try {
-        // Use mock data as fallback when database operations fail
-        let issueStatusData = [];
-        let issueTypeData = [];
-        let recentIssuesData = [];
-        let lowStockData = [];
-        let unassignedData = [];
-        let pendingPurchaseData = [];
+        // Fetch total issues count
+        const { count: totalIssues } = await supabase
+          .from('issues')
+          .select('*', { count: 'exact', head: true });
 
-        // Try to get data from Supabase, fallback to mock data if it fails
-        try {
-          const { data: statusData, error: issueStatusError } = await supabase
-            .rpc('get_issues_by_status');
+        // Fetch open issues count
+        const { count: openIssues } = await supabase
+          .from('issues')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['open', 'in_progress']);
 
-          if (!issueStatusError) {
-            issueStatusData = statusData;
-          } else {
-            console.error('Error fetching issues by status:', issueStatusError);
-            // Fallback to mock data
-            issueStatusData = Object.entries(getIssuesByStatus()).map(([status, count]) => ({
-              status,
-              count
-            }));
-          }
-        } catch (error) {
-          console.error('Error in status query:', error);
-          // Fallback to mock data
-          issueStatusData = Object.entries(getIssuesByStatus()).map(([status, count]) => ({
-            status,
-            count
-          }));
+        // Fetch resolved issues count
+        const { count: resolvedIssues } = await supabase
+          .from('issues')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'resolved');
+
+        // Fetch critical issues count
+        const { count: criticalIssues } = await supabase
+          .from('issues')
+          .select('*', { count: 'exact', head: true })
+          .eq('severity', 'critical')
+          .in('status', ['open', 'in_progress']);
+
+        // Fetch inventory stats
+        const { count: inventoryItems } = await supabase
+          .from('stock_items')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: lowStockItems } = await supabase
+          .from('stock_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'low_stock');
+
+        // Calculate average resolution time
+        const { data: resolvedIssuesData } = await supabase
+          .from('issues')
+          .select('created_at, resolved_at')
+          .eq('status', 'resolved')
+          .not('resolved_at', 'is', null);
+
+        let avgResolutionTime = 0;
+        if (resolvedIssuesData && resolvedIssuesData.length > 0) {
+          const totalTime = resolvedIssuesData.reduce((sum, issue) => {
+            const createdAt = new Date(issue.created_at);
+            const resolvedAt = new Date(issue.resolved_at);
+            const diffTime = Math.abs(resolvedAt.getTime() - createdAt.getTime());
+            const diffHours = diffTime / (1000 * 60 * 60);
+            return sum + diffHours;
+          }, 0);
+          avgResolutionTime = totalTime / resolvedIssuesData.length;
         }
 
-        try {
-          const { data: typeData, error: issueTypeError } = await supabase
-            .rpc('get_issues_by_type');
-
-          if (!issueTypeError) {
-            issueTypeData = typeData;
-          } else {
-            console.error('Error fetching issues by type:', issueTypeError);
-            // Fallback to mock data
-            issueTypeData = Object.entries(getIssuesByType()).map(([type, count]) => ({
-              type,
-              count
-            }));
-          }
-        } catch (error) {
-          console.error('Error in type query:', error);
-          // Fallback to mock data
-          issueTypeData = Object.entries(getIssuesByType()).map(([type, count]) => ({
-            type,
-            count
-          }));
-        }
-
-        try {
-          const { data: recentIssues, error: recentIssuesError } = await supabase
-            .from('issues')
-            .select('*, custom_users!issues_submitted_by_fkey(name)')
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (!recentIssuesError && recentIssues) {
-            recentIssuesData = recentIssues;
-          } else {
-            console.error('Error fetching recent issues:', recentIssuesError);
-            // Fallback to mock data - get 5 most recent issues
-            recentIssuesData = [...issues]
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-              .slice(0, 5);
-          }
-        } catch (error) {
-          console.error('Error in recent issues query:', error);
-          // Fallback to mock data - get 5 most recent issues
-          recentIssuesData = [...issues]
-            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-            .slice(0, 5);
-        }
-
-        try {
-          const { data: lowStock, error: lowStockError } = await supabase
-            .from('stock_items')
-            .select('id')
-            .lt('quantity', 5);
-
-          if (!lowStockError) {
-            lowStockData = lowStock;
-          } else {
-            console.error('Error fetching low stock items:', lowStockError);
-            // Use mock data for low stock count
-            lowStockData = lowStockData.length > 0 ? lowStockData : [{ id: '1' }, { id: '2' }];
-          }
-        } catch (error) {
-          console.error('Error in low stock query:', error);
-          // Use mock data for low stock count
-          lowStockData = [{ id: '1' }, { id: '2' }];
-        }
-
-        try {
-          const { data: unassigned, error: unassignedError } = await supabase
-            .from('issues')
-            .select('id')
-            .is('assigned_to', null)
-            .eq('status', 'submitted');
-
-          if (!unassignedError) {
-            unassignedData = unassigned;
-          } else {
-            console.error('Error fetching unassigned issues:', unassignedError);
-            // Fallback to mock data
-            unassignedData = issues.filter(issue => !issue.assignedTo && issue.status === 'submitted');
-          }
-        } catch (error) {
-          console.error('Error in unassigned issues query:', error);
-          // Fallback to mock data
-          unassignedData = issues.filter(issue => !issue.assignedTo && issue.status === 'submitted');
-        }
-
-        try {
-          const { data: pendingPurchase, error: pendingPurchaseError } = await supabase
-            .from('purchase_requests')
-            .select('id')
-            .eq('status', 'pending');
-
-          if (!pendingPurchaseError) {
-            pendingPurchaseData = pendingPurchase;
-          } else {
-            console.error('Error fetching pending purchases:', pendingPurchaseError);
-            // Mock data for pending purchases
-            pendingPurchaseData = pendingPurchaseData.length > 0 ? pendingPurchaseData : [{ id: '1' }];
-          }
-        } catch (error) {
-          console.error('Error in pending purchases query:', error);
-          // Mock data for pending purchases
-          pendingPurchaseData = [{ id: '1' }];
-        }
-
-        // Calculate average resolution time from completed issues
-        let avgResolutionTime = 24; // Default fallback value
-        try {
-          const { data: resolvedIssues, error: resolvedError } = await supabase
-            .from('issues')
-            .select('created_at, resolved_at')
-            .eq('status', 'resolved')
-            .not('resolved_at', 'is', null);
-
-          if (!resolvedError && resolvedIssues && resolvedIssues.length > 0) {
-            const totalHours = resolvedIssues.reduce((sum, issue) => {
-              const createdAt = new Date(issue.created_at);
-              const resolvedAt = new Date(issue.resolved_at);
-              const hoursToResolve = (resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-              return sum + hoursToResolve;
-            }, 0);
-            avgResolutionTime = Math.round(totalHours / resolvedIssues.length);
-          }
-        } catch (error) {
-          console.error('Error calculating resolution time:', error);
-        }
-
-        // Process issue status data
-        const issuesByStatus = issueStatusData.reduce((acc: Record<string, number>, item: any) => {
-          acc[item.status] = parseInt(item.count);
-          return acc;
-        }, { submitted: 0, 'in-progress': 0, resolved: 0, escalated: 0 });
-
-        // Process issue type data
-        const issuesByType = issueTypeData.reduce((acc: Record<string, number>, item: any) => {
-          acc[item.type] = parseInt(item.count);
-          return acc;
-        }, { hardware: 0, software: 0, network: 0 });
-
-        // Calculate total issues
-        const totalIssues = Object.values(issuesByStatus).reduce((sum, count) => sum + Number(count), 0);
-
-        // Calculate unresolved issues
-        const unresolvedIssues = (Number(issuesByStatus.submitted) || 0) + 
-                               (Number(issuesByStatus['in-progress']) || 0) + 
-                               (Number(issuesByStatus.escalated) || 0);
-
-        // Map recent issues to our frontend format
-        const mappedRecentIssues = Array.isArray(recentIssuesData) 
-          ? recentIssuesData.map((issue: any) => ({
-              id: issue.id,
-              title: issue.title,
-              description: issue.description,
-              submittedBy: issue.submitted_by,
-              assignedTo: issue.assigned_to,
-              severity: issue.severity,
-              type: issue.type,
-              status: issue.status,
-              createdAt: new Date(issue.created_at),
-              updatedAt: new Date(issue.updated_at),
-              resolvedAt: issue.resolved_at ? new Date(issue.resolved_at) : undefined,
-              submitterName: issue.custom_users?.name || 'Unknown'
-            }))
-          : [];
-
-        const transformedStats: DashboardStats = {
-          totalIssues,
-          issuesByStatus,
-          issuesByType,
-          averageResolutionTime: stats?.averageResolutionTime || 24,
-          lowStockItems: Array.isArray(lowStockData) ? lowStockData.length : 0,
-          recentIssues: mappedRecentIssues,
-          unassignedIssues: Array.isArray(unassignedData) ? unassignedData.length : 0,
-          pendingPurchaseRequests: Array.isArray(pendingPurchaseData) ? pendingPurchaseData.length : 0
-        };
-
-        setStats(transformedStats);
-      } catch (error: any) {
-        console.error('Error fetching dashboard data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try again later.",
-          variant: "destructive",
+        setStats({
+          totalIssues: totalIssues || 0,
+          openIssues: openIssues || 0,
+          resolvedIssues: resolvedIssues || 0,
+          criticalIssues: criticalIssues || 0,
+          avgResolutionTime,
+          inventoryItems: inventoryItems || 0,
+          lowStockItems: lowStockItems || 0,
         });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [refreshKey]);
 
-  if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 w-64 bg-gray-200 rounded"></div>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Calculate percentages
+  const calculatePercentage = (value: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.round((value / total) * 100);
+  };
+
+  const openIssuesPercentage = calculatePercentage(stats.openIssues, stats.totalIssues);
+  const resolvedIssuesPercentage = calculatePercentage(stats.resolvedIssues, stats.totalIssues);
+  const criticalIssuesPercentage = calculatePercentage(stats.criticalIssues, stats.totalIssues);
+  const lowStockPercentage = calculatePercentage(stats.lowStockItems, stats.inventoryItems);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of IT support system activity and metrics
-        </p>
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          {hasRole(['admin', 'employee']) && <CalendarDateRangePicker />}
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
-
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <DashboardCard
-          title="Total Issues"
-          value={stats?.totalIssues || 0}
-          description="All reported issues"
-          icon={FileWarning}
-          trend={{
-            value: 5,
-            isUpward: true,
-            label: "from last week"
-          }}
-        />
-        
-        <DashboardCard
-          title="Unresolved Issues"
-          value={(Number(stats?.issuesByStatus?.submitted) || 0) + 
-                (Number(stats?.issuesByStatus?.['in-progress']) || 0) + 
-                (Number(stats?.issuesByStatus?.escalated) || 0)}
-          description="Issues pending resolution"
-          icon={AlertTriangle}
-          trend={{
-            value: 2,
-            isUpward: false,
-            label: "from last week"
-          }}
-        />
-        
-        <DashboardCard
-          title="Resolved Issues"
-          value={Number(stats?.issuesByStatus?.resolved) || 0}
-          description="Successfully resolved"
-          icon={CheckCircle2}
-          trend={{
-            value: 10,
-            isUpward: true,
-            label: "from last week"
-          }}
-        />
-        
-        <DashboardCard
-          title="Average Resolution Time"
-          value={stats?.averageResolutionTime || 0}
-          description="Hours to resolve"
-          icon={Clock}
-          suffix="h"
-          trend={{
-            value: 1.5,
-            isUpward: false,
-            label: "better than last month"
-          }}
-        />
-        
-        <DashboardCard
-          title="Low Stock Items"
-          value={stats?.lowStockItems || 0}
-          description="Items to reorder"
-          icon={PackageOpen}
-          trend={{
-            value: 3,
-            isUpward: true,
-            label: "from last month"
-          }}
-        />
-        
-        <DashboardCard
-          title="Recent Activity"
-          value={(new Date()).toLocaleDateString()}
-          description="Last system update"
-          icon={CalendarDays}
-        />
-
-        {hasRole('admin') && (
-          <>
-            <DashboardCard
-              title="Unassigned Issues"
-              value={stats?.unassignedIssues || 0}
-              description="Need attention"
-              icon={FileWarning}
-              variant="warning"
-            />
-            
-            <DashboardCard
-              title="Pending Purchases"
-              value={stats?.pendingPurchaseRequests || 0}
-              description="Approval needed"
-              icon={ShoppingCart}
-              variant="default"
-            />
-            
-            <DashboardCard
-              title="Total Inventory"
-              value="View"
-              description="Manage stock items"
-              icon={Database}
-              variant="outline"
-              link="/stock"
-            />
-          </>
-        )}
-      </div>
-
-      <Tabs defaultValue="recent-issues" className="space-y-4">
+      
+      <Tabs defaultValue="overview" className="space-y-4 mt-4">
         <TabsList>
-          <TabsTrigger value="recent-issues">Recent Issues</TabsTrigger>
-          {hasRole('admin') && (
-            <TabsTrigger value="purchase-requests">Purchase Requests</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          {hasRole(['admin', 'employee']) && (
+            <TabsTrigger value="inventory">Inventory</TabsTrigger>
           )}
         </TabsList>
         
-        <TabsContent value="recent-issues" className="space-y-4">
-          {stats?.recentIssues && stats.recentIssues.length > 0 ? (
-            <div className="rounded-md border shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="py-2 px-4 text-left font-medium">Title</th>
-                    <th className="py-2 px-4 text-left font-medium">Submitted By</th>
-                    <th className="py-2 px-4 text-left font-medium">Status</th>
-                    <th className="py-2 px-4 text-left font-medium">Type</th>
-                    <th className="py-2 px-4 text-left font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentIssues.map((issue) => (
-                    <tr key={issue.id} className="border-t hover:bg-muted/25">
-                      <td className="py-2 px-4">{issue.title}</td>
-                      <td className="py-2 px-4">{issue.submitterName}</td>
-                      <td className="py-2 px-4 capitalize">{issue.status.replace('-', ' ')}</td>
-                      <td className="py-2 px-4 capitalize">{issue.type}</td>
-                      <td className="py-2 px-4">{new Date(issue.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No recent issues found.
-            </div>
-          )}
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Issues</CardTitle>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground"
+                >
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-[100px]" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{stats.totalIssues}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.totalIssues > 0 ? `+${stats.totalIssues} from last month` : 'No issues last month'}
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Open Issues</CardTitle>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-[100px]" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{stats.openIssues}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {openIssuesPercentage}% of total issues
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Critical Issues</CardTitle>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground"
+                >
+                  <rect width="20" height="14" x="2" y="5" rx="2" />
+                  <path d="M2 10h20" />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-[100px]" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{stats.criticalIssues}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {criticalIssuesPercentage}% of total issues
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Resolution Time</CardTitle>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground"
+                >
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-[100px]" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">
+                      {stats.avgResolutionTime.toFixed(1)} hrs
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      For {stats.resolvedIssues} resolved issues
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Issue Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                {isLoading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  <Overview />
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Recent Issues</CardTitle>
+                <CardDescription>
+                  {stats.openIssues} open issues
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                  </div>
+                ) : (
+                  <RecentIssues />
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
-        {hasRole('admin') && (
-          <TabsContent value="purchase-requests" className="space-y-4">
-            <PurchaseRequestList limit={3} showActions />
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle>Issues by Type</CardTitle>
+                <CardDescription>
+                  Distribution of issues by category
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                {isLoading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  <IssuesByType />
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle>Issues by Status</CardTitle>
+                <CardDescription>
+                  Current status of all issues
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                {isLoading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  <IssuesByStatus />
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle>Issues by Department</CardTitle>
+                <CardDescription>
+                  Distribution across departments
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                {isLoading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  <IssuesByDepartment />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Resolution Time Trends</CardTitle>
+              <CardDescription>
+                Average time to resolve issues over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+              {isLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : (
+                <IssueResolutionTime />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {hasRole(['admin', 'employee']) && (
+          <TabsContent value="inventory" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    className="h-4 w-4 text-muted-foreground"
+                  >
+                    <path d="M2 10V7a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3M2 10v7a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4v-7" />
+                    <path d="M2 10h20" />
+                  </svg>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-[100px]" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{stats.inventoryItems}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Items in inventory
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    className="h-4 w-4 text-muted-foreground"
+                  >
+                    <path d="M16 2v5h5" />
+                    <path d="M21 6v6.5c0 .8-.7 1.5-1.5 1.5h-7c-.8 0-1.5-.7-1.5-1.5v-9c0-.8.7-1.5 1.5-1.5H17l4 4z" />
+                    <path d="M7 8v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H15" />
+                    <path d="M3 12v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H11" />
+                  </svg>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-[100px]" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{stats.lowStockItems}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {lowStockPercentage}% of inventory needs restock
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card className="col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Inventory Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-[100px] w-full" />
+                  ) : (
+                    <InventoryStatus />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         )}
       </Tabs>
