@@ -49,6 +49,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to convert string role to UserRole type
+  const validateUserRole = (role: string): UserRole => {
+    if (role === 'admin' || role === 'employee' || role === 'user') {
+      return role as UserRole;
+    }
+    // Default to 'user' if the role is invalid
+    return 'user';
+  };
+
   const refreshProfile = async () => {
     const userId = localStorage.getItem('userId');
     if (!userId) return;
@@ -67,7 +76,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (data) {
         setUser({
-          ...data,
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: validateUserRole(data.role),
+          department: data.department,
+          avatar: data.avatar,
           created_at: new Date(data.created_at),
         });
       }
@@ -125,9 +139,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Store user ID in localStorage for session management
       localStorage.setItem('userId', data.id);
       
-      // Set user data
+      // Set user data with validated role
       setUser({
-        ...data,
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: validateUserRole(data.role),
+        department: data.department,
+        avatar: data.avatar,
         created_at: new Date(data.created_at),
       });
       
@@ -192,9 +211,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Store user ID in localStorage for session management
       localStorage.setItem('userId', data.id);
       
-      // Set user data
+      // Set user data with validated role
       setUser({
-        ...data,
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: validateUserRole(data.role),
+        department: data.department,
+        avatar: data.avatar,
         created_at: new Date(data.created_at),
       });
       
