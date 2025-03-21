@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Issue } from '@/types';
 import IssueList from '@/components/issues/IssueList';
@@ -12,7 +12,18 @@ const Issues = () => {
   const { user, hasRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [currentTab, setCurrentTab] = useState('all');
+  const [currentTab, setCurrentTab] = useState('mine'); // Default to 'mine' for regular users
+
+  // Set default tab based on user role
+  useEffect(() => {
+    if (hasRole(['admin'])) {
+      setCurrentTab('all');
+    } else if (hasRole(['employee'])) {
+      setCurrentTab('assigned');
+    } else {
+      setCurrentTab('mine');
+    }
+  }, [hasRole]);
 
   // Use React Query for better caching and fetching
   const { data: issues, isLoading } = useQuery({

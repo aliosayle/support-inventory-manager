@@ -13,7 +13,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps) => {
-  const { isAuthenticated, hasRole, isLoading } = useAuth();
+  const { isAuthenticated, hasRole, isLoading, user } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
@@ -52,7 +52,20 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }
 
-  // Role check
+  // Role-based redirect for specific pages
+  if (user && user.role === 'user') {
+    // Regular users shouldn't access dashboard, redirect to issues
+    if (location.pathname === '/dashboard') {
+      return <Navigate to="/issues" replace />;
+    }
+    
+    // Regular users shouldn't access reports
+    if (location.pathname === '/reports') {
+      return <Navigate to="/issues" replace />;
+    }
+  }
+
+  // Role check for protected routes
   if (requireAuth && requiredRoles.length > 0 && !requiredRoles.some(role => hasRole(role as any))) {
     return <Navigate to="/unauthorized" replace />;
   }
