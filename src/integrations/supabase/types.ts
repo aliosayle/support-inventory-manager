@@ -343,7 +343,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_issues_by_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          status: Database["public"]["Enums"]["issue_status"]
+          count: number
+        }[]
+      }
+      get_issues_by_type: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          type: Database["public"]["Enums"]["issue_type"]
+          count: number
+        }[]
+      }
     }
     Enums: {
       issue_severity: "low" | "medium" | "high"

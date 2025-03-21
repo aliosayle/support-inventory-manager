@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,7 @@ import DashboardCard from '@/components/dashboard/DashboardCard';
 import { 
   LineChart, BarChart, CalendarDays, 
   CheckCircle2, Clock, Package, PackageOpen, 
-  ShoppingCart, Users2, AlertTriangle, 
+  ShoppingCart, AlertTriangle, 
   FileWarning, Database
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -22,7 +21,6 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch issue counts by status
         const { data: issueStatusData, error: issueStatusError } = await supabase
           .rpc('get_issues_by_status');
 
@@ -30,7 +28,6 @@ const Dashboard = () => {
           throw issueStatusError;
         }
 
-        // Fetch issue counts by type
         const { data: issueTypeData, error: issueTypeError } = await supabase
           .rpc('get_issues_by_type');
 
@@ -38,7 +35,6 @@ const Dashboard = () => {
           throw issueTypeError;
         }
 
-        // Fetch recent issues
         const { data: recentIssues, error: recentIssuesError } = await supabase
           .from('issues')
           .select('*, custom_users!issues_submitted_by_fkey(name)')
@@ -49,7 +45,6 @@ const Dashboard = () => {
           throw recentIssuesError;
         }
 
-        // Fetch low stock items count
         const { data: lowStockData, error: lowStockError } = await supabase
           .from('stock_items')
           .select('id')
@@ -59,7 +54,6 @@ const Dashboard = () => {
           throw lowStockError;
         }
 
-        // Fetch unassigned issues count
         const { data: unassignedData, error: unassignedError } = await supabase
           .from('issues')
           .select('id')
@@ -70,7 +64,6 @@ const Dashboard = () => {
           throw unassignedError;
         }
 
-        // Fetch pending purchase requests count
         const { data: pendingPurchaseData, error: pendingPurchaseError } = await supabase
           .from('purchase_requests')
           .select('id')
@@ -80,10 +73,8 @@ const Dashboard = () => {
           throw pendingPurchaseError;
         }
 
-        // Calculate average resolution time (simplified)
-        const avgResolutionTime = 24; // Placeholder: 24 hours
+        const avgResolutionTime = 24;
 
-        // Transform data into the format expected by the component
         const issuesByStatus = issueStatusData.reduce((acc: Record<string, number>, item: any) => {
           acc[item.status] = parseInt(item.count);
           return acc;
@@ -225,7 +216,6 @@ const Dashboard = () => {
           icon={CalendarDays}
         />
 
-        {/* Additional cards for admin users */}
         {hasRole('admin') && (
           <>
             <DashboardCard
