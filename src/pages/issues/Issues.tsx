@@ -40,9 +40,11 @@ const Issues = () => {
           throw error;
         }
         
+        console.log("Fetched issues:", data?.length || 0);
         // Map database issues to frontend format
         return mapDbIssues(data || []);
       } catch (error: any) {
+        console.error('Error fetching issues:', error);
         toast({
           title: "Error",
           description: error.message || "Failed to fetch issues",

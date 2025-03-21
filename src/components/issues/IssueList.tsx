@@ -39,7 +39,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { mapDbUsers } from '@/utils/dataMapping';
 
 interface IssueListProps {
@@ -79,6 +79,7 @@ const IssueList: React.FC<IssueListProps> = ({
   setCurrentTab 
 }) => {
   const { user, hasRole } = useAuth();
+  const queryClient = useQueryClient();
   
   // Fetch employees with React Query
   const { data: employees = [] } = useQuery({
@@ -170,6 +171,7 @@ const IssueList: React.FC<IssueListProps> = ({
     
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
     
+    // Filter based on current tab
     const matchesTab = currentTab === 'all' || 
       (currentTab === 'mine' && issue.submittedBy === user?.id) ||
       (currentTab === 'assigned' && issue.assignedTo === user?.id);
@@ -225,7 +227,6 @@ const IssueList: React.FC<IssueListProps> = ({
           )}
         </TabsList>
         
-        {/* Fix: Add value prop to TabsContent */}
         <TabsContent value={currentTab} className="mt-6">
           {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
@@ -360,9 +361,5 @@ const renderIssueList = (
     </div>
   );
 };
-
-// Add React Query client reference 
-import { useQueryClient } from '@tanstack/react-query';
-const queryClient = useQueryClient();
 
 export default IssueList;
