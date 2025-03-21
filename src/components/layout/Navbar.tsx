@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -44,7 +43,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }: NavbarProps) => {
             className="shrink-0"
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            {isSidebarOpen ? <Menu size={20} /> : <Menu size={20} />}
           </Button>
           <div className="text-xl font-medium hidden sm:block">
             IT Department

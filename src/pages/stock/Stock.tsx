@@ -28,11 +28,11 @@ const Stock = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground text-sm">
             Manage and track IT department inventory and equipment.
           </p>
         </div>

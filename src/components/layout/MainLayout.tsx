@@ -69,7 +69,7 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
         )}
       >
         <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-        <main className="flex-1 p-6 animate-fade-in overflow-y-auto">
+        <main className="flex-1 p-4 animate-fade-in overflow-y-auto">
           <Outlet />
         </main>
       </div>
