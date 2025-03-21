@@ -45,11 +45,29 @@ type IssueStats = {
   avg_resolution_time: number;
 }
 
+// Define chart data types
+type MonthlyChartData = {
+  name: string;
+  count: number;
+  month: number;
+}
+
+type TypeChartData = {
+  name: string;
+  value: number;
+}
+
+type WeeklyChartData = {
+  name: string;
+  time: number;
+  week_number: number;
+}
+
 const Reports = () => {
   const [activeTab, setActiveTab] = useState("overview");
   
   // Fetch issues by month data
-  const { data: issuesByMonth = [], isLoading: isLoadingMonthly } = useQuery<IssueByMonth[]>({
+  const { data: issuesByMonth = [], isLoading: isLoadingMonthly } = useQuery<MonthlyChartData[]>({
     queryKey: ['issuesByMonth'],
     queryFn: async () => {
       try {
@@ -69,7 +87,7 @@ const Reports = () => {
         // Format data from database
         return data.map((item: IssueByMonth) => ({
           name: months[item.month - 1], // Convert month number to name
-          count: parseInt(item.count.toString()),
+          count: typeof item.count === 'number' ? item.count : parseInt(String(item.count)),
           month: item.month
         }));
       } catch (error) {
@@ -81,7 +99,7 @@ const Reports = () => {
   });
   
   // Fetch issues by type data
-  const { data: issuesByType = [], isLoading: isLoadingTypes } = useQuery<IssueByType[]>({
+  const { data: issuesByType = [], isLoading: isLoadingTypes } = useQuery<TypeChartData[]>({
     queryKey: ['issuesByType'],
     queryFn: async () => {
       try {
@@ -90,9 +108,13 @@ const Reports = () => {
         if (error) throw error;
         
         // Format data for chart
+        if (!data || data.length === 0) {
+          return [];
+        }
+        
         return data.map((item: IssueByType) => ({
           name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
-          value: parseInt(item.count.toString())
+          value: typeof item.count === 'number' ? item.count : parseInt(String(item.count))
         }));
       } catch (error) {
         console.error('Error fetching issues by type:', error);
@@ -103,7 +125,7 @@ const Reports = () => {
   });
   
   // Fetch resolution time data
-  const { data: issueResolutionTime = [], isLoading: isLoadingResolution } = useQuery<ResolutionTimeByWeek[]>({
+  const { data: issueResolutionTime = [], isLoading: isLoadingResolution } = useQuery<WeeklyChartData[]>({
     queryKey: ['resolutionTime'],
     queryFn: async () => {
       try {
@@ -122,7 +144,7 @@ const Reports = () => {
         
         return data.map((item: ResolutionTimeByWeek) => ({
           name: `Week ${item.week_number}`,
-          time: parseFloat(item.avg_hours.toFixed(1)),
+          time: typeof item.avg_hours === 'number' ? parseFloat(item.avg_hours.toFixed(1)) : 0,
           week_number: item.week_number
         }));
       } catch (error) {
@@ -151,11 +173,12 @@ const Reports = () => {
           };
         }
         
+        const statsData = data[0];
         return {
-          total_issues: parseInt(data[0].total_issues.toString()),
-          open_issues: parseInt(data[0].open_issues.toString()),
-          resolved_issues: parseInt(data[0].resolved_issues.toString()),
-          avg_resolution_time: parseFloat(data[0].avg_resolution_time.toFixed(1))
+          total_issues: typeof statsData.total_issues === 'number' ? statsData.total_issues : parseInt(String(statsData.total_issues)),
+          open_issues: typeof statsData.open_issues === 'number' ? statsData.open_issues : parseInt(String(statsData.open_issues)),
+          resolved_issues: typeof statsData.resolved_issues === 'number' ? statsData.resolved_issues : parseInt(String(statsData.resolved_issues)),
+          avg_resolution_time: typeof statsData.avg_resolution_time === 'number' ? parseFloat(statsData.avg_resolution_time.toFixed(1)) : 0
         };
       } catch (error) {
         console.error('Error fetching issue stats:', error);
