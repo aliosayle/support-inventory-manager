@@ -70,7 +70,7 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
       <div
         className={cn(
           "flex flex-col flex-1 transition-all duration-300",
-          isSidebarOpen ? "md:ml-0" : "md:ml-0" // Removed left margin for both states
+          isSidebarOpen ? "md:ml-64" : "md:ml-16"
         )}
       >
         <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />

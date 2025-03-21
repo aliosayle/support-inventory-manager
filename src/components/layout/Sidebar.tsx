@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { NavLink } from 'react-router-dom';
@@ -98,7 +99,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside 
       className={cn(
-        "border-r h-screen bg-sidebar flex flex-col z-20 transition-all duration-300 ease-in-out fixed",
+        "border-r h-screen bg-sidebar flex flex-col z-20 transition-all duration-300 ease-in-out",
         isOpen ? "w-64" : "w-16"
       )}
     >
