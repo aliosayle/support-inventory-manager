@@ -22,35 +22,23 @@ const NewUser = () => {
     setIsLoading(true);
     
     try {
-      const { password, ...profileData } = userData;
+      // In a real app, we would hash the password first
+      // For demo purposes, we're storing a fake hash
+      const passwordHash = '$2a$10$b8Ycw7tIHgsfoLHyYQ.YaOG45hR1askYWQuALEbTZ9bR6T1qsQzLa'; // Pretend hash of 'password'
       
-      // First create the Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email!,
-        password: password!,
-        email_confirm: true,
-        user_metadata: {
-          name: userData.name
-        }
-      });
+      // Create the new user
+      const { error } = await supabase
+        .from('custom_users')
+        .insert({
+          email: userData.email,
+          password_hash: passwordHash,
+          name: userData.name,
+          role: userData.role,
+          department: userData.department
+        });
       
-      if (authError) {
-        throw authError;
-      }
-      
-      // Update the profile with role and department
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            role: userData.role,
-            department: userData.department
-          })
-          .eq('id', authData.user.id);
-        
-        if (profileError) {
-          throw profileError;
-        }
+      if (error) {
+        throw error;
       }
       
       toast({

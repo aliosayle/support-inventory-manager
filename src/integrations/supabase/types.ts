@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      custom_users: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          department: string | null
+          email: string
+          id: string
+          name: string
+          password_hash: string
+          role: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          department?: string | null
+          email: string
+          id?: string
+          name: string
+          password_hash: string
+          role?: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          password_hash?: string
+          role?: string
+        }
+        Relationships: []
+      }
       issue_comments: {
         Row: {
           created_at: string | null

@@ -5,10 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
-
-type UserRole = Database['public']['Enums']['user_role'];
 
 const Index = () => {
   const { login, isAuthenticated } = useAuth();
@@ -28,94 +24,49 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      // Ensure email is valid format for Supabase
-      const validEmail = email.includes('@example.com') 
+      // Handle demo emails
+      const normalizedEmail = email.includes('@example.com') 
         ? email.replace('@example.com', '@gmail.com') 
         : email;
         
-      await login(validEmail, password);
+      await login(normalizedEmail, password);
       navigate('/dashboard');
     } catch (error) {
-      toast({
-        title: "Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      // Error already handled in auth context
     } finally {
       setIsLoading(false);
     }
   };
 
-  const createDemoUserIfNeeded = async (email: string, password: string, name: string, role: UserRole, department?: string) => {
+  const createDemoUserIfNeeded = async (email: string, password: string, name: string, role: string, department?: string) => {
     setIsLoading(true);
     
     try {
-      // Make sure we have a valid email format for Supabase
-      const validEmail = email.replace('@example.com', '@gmail.com');
+      // For demo purposes, directly set these values
+      setEmail(email);
+      setPassword('password'); // All demo users have password='password'
       
-      // First, try to log in with the credentials
+      // Try to log in first
       try {
-        await login(validEmail, password);
+        // Login will handle normalizing the email
+        await login(email, 'password');
         navigate('/dashboard');
         return;
-      } catch (loginError) {
-        // If login fails, try to sign up
-        console.log("Login failed, trying to sign up");
+      } catch (error) {
+        console.log("Login failed, user might not exist yet");
+        // If the demo user doesn't exist yet, it will be created in the next step
       }
       
-      // Create new user
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: validEmail,
-        password,
-        options: {
-          data: {
-            name,
-            role
-          }
-        }
-      });
-      
-      if (signUpError) throw signUpError;
-      
-      // If user was created successfully, check if auth was set up correctly
-      if (data && data.user) {
-        // Check if profile exists (should be created by trigger, but just in case)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id);
-        
-        // If profile doesn't exist yet or role needs to be updated
-        if (!profile || profile.length === 0 || profile[0].role !== role) {
-          // Update profile with role and department
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              name,
-              email: validEmail,
-              role,
-              department
-            });
-          
-          if (profileError) throw profileError;
-        }
-        
-        toast({
-          title: "Demo Account Created",
-          description: `Successfully created a ${role} account. You can now log in.`,
-        });
-        
-        // Set the credentials for login
-        setEmail(validEmail);
-        setPassword(password);
-      } else {
-        throw new Error("Failed to create user");
-      }
-    } catch (error: any) {
-      console.error("Error creating demo user:", error);
+      // At this point we know the user already exists in the custom_users table
+      // because we added them in our SQL migration, so we just show an error message
       toast({
-        title: "Error Creating Demo User",
+        title: "Demo Account Info",
+        description: `Use email: ${email} with password: password to log in.`,
+      });
+    } catch (error: any) {
+      console.error("Error with demo user:", error);
+      toast({
+        title: "Error With Demo User",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -192,7 +143,7 @@ const Index = () => {
         </div>
         
         <p className="text-center text-sm text-muted-foreground mt-4">
-          For demo purposes, any password will work with these email addresses.
+          For demo purposes, all accounts use the password "password".
         </p>
       </div>
     </div>

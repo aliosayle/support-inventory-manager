@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import UserList from '@/components/users/UserList';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { mapDbUsers } from '@/utils/dataMapping';
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -25,7 +24,7 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from('custom_users')
           .select('*')
           .order('name');
         
@@ -33,8 +32,16 @@ const Users = () => {
           throw error;
         }
         
-        // Transform the data using our mapping utility
-        const transformedUsers = mapDbUsers(data);
+        // Transform the data to match our User type
+        const transformedUsers = data.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          avatar: user.avatar,
+          createdAt: new Date(user.created_at)
+        }));
         
         setUsers(transformedUsers);
       } catch (error: any) {

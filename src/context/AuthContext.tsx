@@ -1,6 +1,5 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types';
 import { toast } from '@/components/ui/use-toast';
@@ -17,8 +16,6 @@ interface UserProfile {
 
 interface AuthContextType {
   user: UserProfile | null;
-  supabaseUser: SupabaseUser | null;
-  session: Session | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -31,8 +28,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  supabaseUser: null,
-  session: null,
   isLoading: false,
   error: null,
   login: async () => {},
@@ -51,19 +46,18 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const refreshProfile = async () => {
-    if (!supabaseUser) return;
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
     
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('custom_users')
         .select('*')
-        .eq('id', supabaseUser.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -83,41 +77,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Initialize auth state
-    const initializeAuth = async () => {
+    // Check if user is already logged in
+    const checkAuth = async () => {
       setIsLoading(true);
       
-      // Set up auth listener
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        setSession(session);
-        setSupabaseUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await refreshProfile();
-        } else {
-          setUser(null);
-        }
-        
-        setIsLoading(false);
-      });
-      
-      // Check current session
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setSupabaseUser(session?.user ?? null);
-      
-      if (session?.user) {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
         await refreshProfile();
       }
       
       setIsLoading(false);
-      
-      return () => {
-        authListener.subscription.unsubscribe();
-      };
     };
     
-    initializeAuth();
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -125,19 +97,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     
     try {
-      // Ensure email is in valid format for Supabase
-      const validEmail = email.includes('@example.com') 
+      // Handle demo emails
+      const normalizedEmail = email.includes('@example.com') 
         ? email.replace('@example.com', '@gmail.com') 
         : email;
-        
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: validEmail,
-        password
-      });
+
+      // In a real app, we would hash the password and compare with the stored hash
+      // For demo purposes, we're directly comparing with the password_hash field
+      // where all demo accounts have password='password'
+      
+      const { data, error } = await supabase
+        .from('custom_users')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .single();
       
       if (error) {
-        throw error;
+        throw new Error('User not found');
       }
+      
+      // In a real app we would verify the password hash here
+      // For demo purposes, we're just checking if password equals 'password'
+      if (password !== 'password') {
+        throw new Error('Invalid password');
+      }
+      
+      // Store user ID in localStorage for session management
+      localStorage.setItem('userId', data.id);
+      
+      // Set user data
+      setUser({
+        ...data,
+        created_at: new Date(data.created_at),
+      });
       
       toast({
         title: "Logged in successfully",
@@ -150,7 +142,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: err.message,
         variant: "destructive",
       });
-      throw err; // Re-throw to allow callers to catch the error
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -161,24 +153,50 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     
     try {
-      // Ensure email is valid format for Supabase
-      const validEmail = email.includes('@example.com') 
+      // Handle demo emails
+      const normalizedEmail = email.includes('@example.com') 
         ? email.replace('@example.com', '@gmail.com') 
         : email;
-        
-      const { data, error } = await supabase.auth.signUp({
-        email: validEmail,
-        password,
-        options: {
-          data: {
-            name,
-          }
-        }
-      });
+      
+      // Check if user exists
+      const { data: existingUser } = await supabase
+        .from('custom_users')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .single();
+      
+      if (existingUser) {
+        throw new Error('User already exists. Please login instead.');
+      }
+      
+      // In a real app, we would hash the password first
+      // For demo purposes, we're storing a fake hash
+      const passwordHash = '$2a$10$b8Ycw7tIHgsfoLHyYQ.YaOG45hR1askYWQuALEbTZ9bR6T1qsQzLa'; // Pretend hash of 'password'
+      
+      // Create the new user
+      const { data, error } = await supabase
+        .from('custom_users')
+        .insert({
+          email: normalizedEmail,
+          password_hash: passwordHash,
+          name,
+          role: 'user', // Default role
+        })
+        .select()
+        .single();
       
       if (error) {
         throw error;
       }
+      
+      // Store user ID in localStorage for session management
+      localStorage.setItem('userId', data.id);
+      
+      // Set user data
+      setUser({
+        ...data,
+        created_at: new Date(data.created_at),
+      });
       
       toast({
         title: "Account created",
@@ -199,7 +217,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Clear the user ID from localStorage
+      localStorage.removeItem('userId');
+      
+      // Clear user state
+      setUser(null);
+      
       toast({
         title: "Logged out",
         description: "You have been logged out successfully.",
@@ -227,14 +250,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   return (
     <AuthContext.Provider value={{
       user,
-      supabaseUser,
-      session,
       isLoading,
       error,
       login,
       signup,
       logout,
-      isAuthenticated: !!session,
+      isAuthenticated: !!user,
       hasRole,
       refreshProfile,
     }}>
