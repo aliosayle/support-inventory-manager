@@ -13,6 +13,8 @@ import NewIssue from "./pages/issues/NewIssue";
 import Stock from "./pages/stock/Stock";
 import Users from "./pages/users/Users";
 import NewUser from "./pages/users/NewUser";
+import Reports from "./pages/reports/Reports";
+import KnowledgeBase from "./pages/knowledge/KnowledgeBase";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/stock" element={<Stock />} />
               <Route path="/users" element={<Users />} />
               <Route path="/users/new" element={<NewUser />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/knowledge" element={<KnowledgeBase />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

@@ -5,6 +5,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   requireAuth?: boolean;
@@ -15,24 +16,16 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
   const { isAuthenticated, hasRole, isLoading } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
 
-  // Check window size and update sidebar state
+  // Update sidebar state based on device size
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+    }
+  }, [isMobile]);
 
   // Close sidebar on route change if mobile
   useEffect(() => {
@@ -70,7 +63,9 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
       <div
         className={cn(
           "flex flex-col flex-1 transition-all duration-300",
-          isSidebarOpen ? "md:ml-64" : "md:ml-16"
+          isMobile
+            ? "ml-0" // No margin on mobile
+            : (isSidebarOpen ? "ml-64" : "ml-16") // Responsive margin on desktop
         )}
       >
         <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
