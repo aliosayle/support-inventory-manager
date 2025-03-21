@@ -3,12 +3,13 @@ import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { LucideIcon } from 'lucide-react';
 
 interface DashboardCardProps {
   title: string;
   value: string | number;
   description?: string;
-  icon?: React.ComponentType<{ className?: string; size?: number }>;
+  icon?: LucideIcon;
   suffix?: string;
   trend?: {
     value: number;

@@ -220,8 +220,34 @@ export const getUsersByRole = (role: UserRole): User[] => {
 };
 
 // Helper function to get issues by status
-export const getIssuesByStatus = (status: IssueStatus): Issue[] => {
-  return issues.filter(issue => issue.status === status);
+export const getIssuesByStatus = (): Record<IssueStatus, number> => {
+  const statusCounts: Record<IssueStatus, number> = {
+    'submitted': 0,
+    'in-progress': 0,
+    'resolved': 0,
+    'escalated': 0
+  };
+  
+  issues.forEach(issue => {
+    statusCounts[issue.status]++;
+  });
+  
+  return statusCounts;
+};
+
+// Helper function to get issues by type
+export const getIssuesByType = (): Record<IssueType, number> => {
+  const typeCounts: Record<IssueType, number> = {
+    'hardware': 0,
+    'software': 0,
+    'network': 0
+  };
+  
+  issues.forEach(issue => {
+    typeCounts[issue.type]++;
+  });
+  
+  return typeCounts;
 };
 
 // Helper function to get issues assigned to a user

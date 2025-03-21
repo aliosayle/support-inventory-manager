@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -194,6 +193,14 @@ const Dashboard = () => {
           return acc;
         }, { hardware: 0, software: 0, network: 0 });
 
+        // Calculate total issues
+        const totalIssues = Object.values(issuesByStatus).reduce((sum, count) => sum + Number(count), 0);
+
+        // Calculate unresolved issues
+        const unresolvedIssues = (Number(issuesByStatus.submitted) || 0) + 
+                               (Number(issuesByStatus['in-progress']) || 0) + 
+                               (Number(issuesByStatus.escalated) || 0);
+
         // Map recent issues to our frontend format
         const mappedRecentIssues = Array.isArray(recentIssuesData) 
           ? recentIssuesData.map((issue: any) => ({
@@ -213,11 +220,11 @@ const Dashboard = () => {
           : [];
 
         const transformedStats: DashboardStats = {
-          totalIssues: Object.values(issuesByStatus).reduce((a, b) => a + b, 0),
+          totalIssues,
           issuesByStatus,
           issuesByType,
-          averageResolutionTime: avgResolutionTime,
-          lowStockItems: lowStockData.length,
+          averageResolutionTime: stats?.averageResolutionTime || 24,
+          lowStockItems: Array.isArray(lowStockData) ? lowStockData.length : 0,
           recentIssues: mappedRecentIssues,
           unassignedIssues: Array.isArray(unassignedData) ? unassignedData.length : 0,
           pendingPurchaseRequests: Array.isArray(pendingPurchaseData) ? pendingPurchaseData.length : 0
@@ -276,7 +283,9 @@ const Dashboard = () => {
         
         <DashboardCard
           title="Unresolved Issues"
-          value={(stats?.issuesByStatus?.submitted || 0) + (stats?.issuesByStatus?.['in-progress'] || 0) + (stats?.issuesByStatus?.escalated || 0)}
+          value={(Number(stats?.issuesByStatus?.submitted) || 0) + 
+                (Number(stats?.issuesByStatus?.['in-progress']) || 0) + 
+                (Number(stats?.issuesByStatus?.escalated) || 0)}
           description="Issues pending resolution"
           icon={AlertTriangle}
           trend={{
@@ -288,7 +297,7 @@ const Dashboard = () => {
         
         <DashboardCard
           title="Resolved Issues"
-          value={stats?.issuesByStatus?.resolved || 0}
+          value={Number(stats?.issuesByStatus?.resolved) || 0}
           description="Successfully resolved"
           icon={CheckCircle2}
           trend={{
