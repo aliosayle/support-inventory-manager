@@ -65,7 +65,7 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
           "flex flex-col flex-1 transition-all duration-300",
           isMobile
             ? "ml-0" // No margin on mobile
-            : (isSidebarOpen ? "ml-0" : "ml-0") // No margin on desktop either
+            : (isSidebarOpen ? "ml-64" : "ml-16") // Account for sidebar width
         )}
       >
         <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
