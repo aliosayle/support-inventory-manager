@@ -29,8 +29,9 @@ const NewIssue = () => {
         throw new Error("Missing required issue fields");
       }
       
+      console.log("Submitting issue with data:", dbIssueData);
+      
       // Create the new issue in the database with specific typing
-      // Type assertion to match what Supabase expects
       const { data, error } = await supabase
         .from('issues')
         .insert({
@@ -40,15 +41,14 @@ const NewIssue = () => {
           type: dbIssueData.type,
           severity: dbIssueData.severity || 'medium',
           status: dbIssueData.status || 'submitted',
-          assigned_to: dbIssueData.assigned_to,
-          created_at: dbIssueData.created_at,
-          updated_at: dbIssueData.updated_at,
-          resolved_at: dbIssueData.resolved_at
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
       
       if (error) {
+        console.error("Database error:", error);
         throw error;
       }
       

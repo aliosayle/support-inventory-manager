@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,14 +31,20 @@ const IssueForm = ({ initialData, onSubmit, isLoading }: IssueFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user?.id) {
+      console.error("No user ID found. User must be logged in to submit an issue.");
+      return;
+    }
+    
     const issueData: Partial<Issue> = {
       title,
       description,
       type,
       severity,
-      submittedBy: user?.id || '',
+      submittedBy: user.id,
     };
     
+    console.log("Submitting form with user ID:", user.id);
     onSubmit(issueData);
   };
 
@@ -112,7 +119,7 @@ const IssueForm = ({ initialData, onSubmit, isLoading }: IssueFormProps) => {
         </div>
         
         <div className="flex justify-end space-x-2">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || !user?.id}>
             {isLoading ? 'Submitting...' : initialData?.id ? 'Update Issue' : 'Submit Issue'}
           </Button>
         </div>
