@@ -54,7 +54,7 @@ export async function createStockItem(stockItem: Omit<StockItem, 'id'>) {
       manufacturer: stockItem.manufacturer,
       model: stockItem.model,
       serial_number: stockItem.serialNumber,
-      purchase_date: stockItem.purchaseDate,
+      purchase_date: stockItem.purchaseDate ? stockItem.purchaseDate.toISOString() : null,
       price: stockItem.price,
       location: stockItem.location,
       status: stockItem.status,
@@ -91,7 +91,7 @@ export async function updateStockItem(id: string, stockItem: Partial<StockItem>)
     if (stockItem.manufacturer !== undefined) dbStockItem.manufacturer = stockItem.manufacturer;
     if (stockItem.model !== undefined) dbStockItem.model = stockItem.model;
     if (stockItem.serialNumber !== undefined) dbStockItem.serial_number = stockItem.serialNumber;
-    if (stockItem.purchaseDate !== undefined) dbStockItem.purchase_date = stockItem.purchaseDate;
+    if (stockItem.purchaseDate !== undefined) dbStockItem.purchase_date = stockItem.purchaseDate ? stockItem.purchaseDate.toISOString() : null;
     if (stockItem.price !== undefined) dbStockItem.price = stockItem.price;
     if (stockItem.location !== undefined) dbStockItem.location = stockItem.location;
     if (stockItem.status !== undefined) dbStockItem.status = stockItem.status;
