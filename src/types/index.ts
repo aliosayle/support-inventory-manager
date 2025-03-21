@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'employee' | 'user';
 
 export type IssueSeverity = 'low' | 'medium' | 'high';
@@ -32,6 +33,7 @@ export interface Issue {
   updatedAt: Date;
   resolvedAt?: Date;
   comments?: IssueComment[];
+  submitterName?: string; // Added to display the name of the submitter
 }
 
 export interface IssueComment {
@@ -95,4 +97,6 @@ export interface DashboardStats {
   averageResolutionTime: number; // in hours
   lowStockItems: number;
   recentIssues: Issue[];
+  unassignedIssues: number; // Added for dashboard
+  pendingPurchaseRequests: number; // Added for dashboard
 }
