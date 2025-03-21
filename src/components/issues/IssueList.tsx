@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Issue, IssueStatus, User } from '@/types';
@@ -78,7 +77,6 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
   }, [propIssues]);
 
   useEffect(() => {
-    // Fetch employees only if user is admin
     if (hasRole(['admin'])) {
       fetchEmployees();
     }
@@ -108,13 +106,10 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
     try {
       let query = supabase.from('issues').select('*');
       
-      // If user is not admin or employee, only show their issues
       if (user && !hasRole(['admin'])) {
         if (hasRole(['employee'])) {
-          // Employee sees only assigned issues
           query = query.eq('assigned_to', user.id);
         } else {
-          // Regular user sees submitted issues
           query = query.eq('submitted_by', user.id);
         }
       }
@@ -146,7 +141,6 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         throw error;
       }
       
-      // Update local state
       setIssues(issues.map(issue => 
         issue.id === issueId 
           ? { ...issue, status: newStatus, updatedAt: new Date() } 
@@ -174,7 +168,7 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         .update({ 
           assigned_to: employeeId,
           updated_at: new Date().toISOString(),
-          status: 'in-progress' // Automatically set to in-progress when assigned
+          status: 'in-progress'
         })
         .eq('id', issueId);
       
@@ -182,7 +176,6 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         throw error;
       }
       
-      // Update local state
       setIssues(issues.map(issue => 
         issue.id === issueId 
           ? { 
@@ -272,15 +265,15 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         </TabsList>
         
         <TabsContent value="all" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
         
         <TabsContent value="mine" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
         
         <TabsContent value="assigned" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole)}
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
       </Tabs>
     </div>
@@ -293,7 +286,7 @@ const renderIssueList = (
   handleStatusChange: (id: string, status: IssueStatus) => void,
   handleAssignIssue: (id: string, employeeId: string) => void,
   employees: User[],
-  hasRole: (roles: string[]) => boolean
+  isAdmin: boolean
 ) => {
   if (isLoading) {
     return (
@@ -351,7 +344,7 @@ const renderIssueList = (
                     Escalated
                   </DropdownMenuItem>
                   
-                  {hasRole(['admin']) && (
+                  {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuSub>
