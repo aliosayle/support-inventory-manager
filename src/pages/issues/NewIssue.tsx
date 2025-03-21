@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Issue } from '@/types';
-import { createIssue } from '@/utils/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import IssueForm from '@/components/issues/IssueForm';
 import { toast } from '@/components/ui/use-toast';
+import { mapIssueToDbIssue } from '@/utils/dataMapping';
 
 const NewIssue = () => {
   const navigate = useNavigate();
@@ -17,11 +18,22 @@ const NewIssue = () => {
       // Add default values for new issue
       const newIssueData = {
         ...issueData,
-        status: 'submitted',
+        status: 'submitted' as const,
       };
       
-      // Create the new issue
-      createIssue(newIssueData as any);
+      // Convert frontend Issue to database issue format
+      const dbIssueData = mapIssueToDbIssue(newIssueData);
+      
+      // Create the new issue in the database
+      const { data, error } = await supabase
+        .from('issues')
+        .insert(dbIssueData)
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Issue Created",
@@ -30,10 +42,11 @@ const NewIssue = () => {
       
       // Redirect to issues list
       navigate('/issues');
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error creating issue:", error);
       toast({
         title: "Error",
-        description: "Failed to create the issue. Please try again.",
+        description: error.message || "Failed to create the issue. Please try again.",
         variant: "destructive",
       });
     } finally {

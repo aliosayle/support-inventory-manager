@@ -1,213 +1,122 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Issue, IssueSeverity, IssueType, User } from '@/types';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Issue, IssueType, IssueSeverity } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 
 interface IssueFormProps {
-  issue?: Issue;
-  onSubmit: (issueData: Partial<Issue>) => Promise<void>;
-  isLoading?: boolean;
+  initialData?: Partial<Issue>;
+  onSubmit: (data: Partial<Issue>) => void;
+  isLoading: boolean;
 }
 
-const IssueForm = ({ issue, onSubmit, isLoading = false }: IssueFormProps) => {
-  const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
-  const [title, setTitle] = useState(issue?.title || '');
-  const [description, setDescription] = useState(issue?.description || '');
-  const [severity, setSeverity] = useState<IssueSeverity>(issue?.severity || 'medium');
-  const [type, setType] = useState<IssueType>(issue?.type || 'software');
-  const [assignedTo, setAssignedTo] = useState<string | undefined>(issue?.assigned_to);
-  const [possibleAssignees, setPossibleAssignees] = useState<User[]>([]);
-  const [loadingAssignees, setLoadingAssignees] = useState(false);
+const IssueForm = ({ initialData, onSubmit, isLoading }: IssueFormProps) => {
+  const { user } = useAuth();
+  
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [type, setType] = useState<IssueType>(initialData?.type || 'hardware');
+  const [severity, setSeverity] = useState<IssueSeverity>(initialData?.severity || 'medium');
 
-  useEffect(() => {
-    // Fetch employees and admins who can be assigned issues
-    const fetchAssignees = async () => {
-      if (hasRole(['admin'])) {
-        setLoadingAssignees(true);
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('role', ['admin', 'employee'])
-            .order('name');
-          
-          if (error) {
-            throw error;
-          }
-          
-          const transformed: User[] = data.map(user => ({
-            ...user,
-            created_at: new Date(user.created_at)
-          }));
-          
-          setPossibleAssignees(transformed);
-        } catch (error: any) {
-          console.error('Error fetching assignees:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load assignees",
-            variant: "destructive",
-          });
-        } finally {
-          setLoadingAssignees(false);
-        }
-      }
-    };
-    
-    fetchAssignees();
-  }, [hasRole]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title || !description) {
-      toast({
-        title: "Error",
-        description: "Please fill all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
     
     const issueData: Partial<Issue> = {
       title,
       description,
-      severity,
       type,
-      submitted_by: user?.id || issue?.submitted_by || '',
+      severity,
+      submittedBy: user?.id || '',
     };
     
-    if (hasRole(['admin', 'employee']) && assignedTo) {
-      issueData.assigned_to = assignedTo;
-    }
-    
-    await onSubmit(issueData);
+    onSubmit(issueData);
   };
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Brief description of the issue"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select
-                  value={type}
-                  onValueChange={(value) => setType(value as IssueType)}
-                >
-                  <SelectTrigger id="type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hardware">Hardware</SelectItem>
-                    <SelectItem value="software">Software</SelectItem>
-                    <SelectItem value="network">Network</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="severity">Severity</Label>
-                <Select
-                  value={severity}
-                  onValueChange={(value) => setSeverity(value as IssueSeverity)}
-                >
-                  <SelectTrigger id="severity">
-                    <SelectValue placeholder="Select severity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {hasRole(['admin']) && (
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign To</Label>
-                  {loadingAssignees ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select
-                      value={assignedTo || ''}
-                      onValueChange={setAssignedTo}
-                    >
-                      <SelectTrigger id="assignedTo">
-                        <SelectValue placeholder="Select assignee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
-                        {possibleAssignees.map((employee: User) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detailed description of the issue"
-                required
-                rows={5}
-              />
-            </div>
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="title" className="text-sm font-medium">
+            Issue Title
+          </label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Brief description of the issue"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="type" className="text-sm font-medium">
+              Issue Type
+            </label>
+            <Select
+              value={type}
+              onValueChange={(value: IssueType) => setType(value)}
+            >
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hardware">Hardware</SelectItem>
+                <SelectItem value="software">Software</SelectItem>
+                <SelectItem value="network">Network</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
-          <div className="flex justify-end space-x-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate(-1)}
-              disabled={isLoading}
+          <div className="space-y-2">
+            <label htmlFor="severity" className="text-sm font-medium">
+              Severity
+            </label>
+            <Select
+              value={severity}
+              onValueChange={(value: IssueSeverity) => setSeverity(value)}
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : issue ? 'Update Issue' : 'Submit Issue'}
-            </Button>
+              <SelectTrigger id="severity">
+                <SelectValue placeholder="Select severity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </form>
-      </CardContent>
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="description" className="text-sm font-medium">
+            Description
+          </label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Detailed description of the issue"
+            rows={5}
+            required
+          />
+        </div>
+        
+        <div className="flex justify-end space-x-2">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Submitting...' : initialData?.id ? 'Update Issue' : 'Submit Issue'}
+          </Button>
+        </div>
+      </form>
     </Card>
   );
 };

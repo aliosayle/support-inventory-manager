@@ -1,267 +1,278 @@
-
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Edit, 
-  Eye, 
-  Filter, 
-  MoreHorizontal, 
-  AlertTriangle, 
-  CheckCircle2,
-  Clock,
-  Laptop,
-  Server,
-  Share2
-} from 'lucide-react';
-import { Issue, User } from '@/types';
-import { getUserById } from '@/utils/mockData';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
+import { Issue, IssueStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MoreHorizontal, Plus, Search } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { mapDbIssues } from '@/utils/dataMapping';
 
 interface IssueListProps {
-  issues: Issue[];
-  onUpdateStatus?: (issueId: string, status: string) => void;
+  issues?: Issue[];
+  isLoading?: boolean;
 }
 
-const IssueList = ({ issues, onUpdateStatus }: IssueListProps) => {
-  const { hasRole } = useAuth();
+const getStatusColor = (status: IssueStatus) => {
+  switch (status) {
+    case 'submitted':
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    case 'in-progress':
+      return 'bg-blue-500 hover:bg-blue-600';
+    case 'resolved':
+      return 'bg-green-500 hover:bg-green-600';
+    case 'escalated':
+      return 'bg-red-500 hover:bg-red-600';
+    default:
+      return 'bg-gray-500 hover:bg-gray-600';
+  }
+};
+
+const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: propIsLoading }) => {
+  const { user, hasRole } = useAuth();
+  const [issues, setIssues] = useState<Issue[]>(propIssues || []);
+  const [isLoading, setIsLoading] = useState<boolean>(propIsLoading || false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentTab, setCurrentTab] = useState<string>('all');
+
+  useEffect(() => {
+    if (propIssues) {
+      setIssues(propIssues);
+    } else {
+      fetchIssues();
+    }
+  }, [propIssues]);
+
+  const fetchIssues = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase.from('issues').select('*');
+      
+      // If user is not admin or employee, only show their issues
+      if (user && !hasRole(['admin', 'employee'])) {
+        query = query.eq('submitted_by', user.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setIssues(mapDbIssues(data));
+      }
+    } catch (error) {
+      console.error('Error fetching issues:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (issueId: string, newStatus: IssueStatus) => {
+    try {
+      const { error } = await supabase
+        .from('issues')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', issueId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setIssues(issues.map(issue => 
+        issue.id === issueId 
+          ? { ...issue, status: newStatus, updatedAt: new Date() } 
+          : issue
+      ));
+    } catch (error) {
+      console.error('Error updating issue status:', error);
+    }
+  };
 
   const filteredIssues = issues.filter(issue => {
-    const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-    const matchesType = typeFilter === 'all' || issue.type === typeFilter;
-    const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          issue.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchQuery === '' || 
+      issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.description.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesStatus && matchesType && matchesSearch;
+    const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
+    
+    const matchesTab = currentTab === 'all' || 
+      (currentTab === 'mine' && issue.submittedBy === user?.id) ||
+      (currentTab === 'assigned' && issue.assignedTo === user?.id);
+    
+    return matchesSearch && matchesStatus && matchesTab;
   });
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      default: return '';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'resolved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'escalated': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      case 'submitted': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default: return '';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'hardware': return <Laptop size={16} />;
-      case 'software': return <Laptop size={16} />;
-      case 'network': return <Share2 size={16} />;
-      default: return null;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'resolved': return <CheckCircle2 size={16} />;
-      case 'in-progress': return <Clock size={16} />;
-      case 'escalated': return <AlertTriangle size={16} />;
-      case 'submitted': return <Server size={16} />;
-      default: return null;
-    }
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    }).format(new Date(date));
-  };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            type="search"
             placeholder="Search issues..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Button variant="outline" size="icon">
-            <Filter size={16} />
-          </Button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        
+        <div className="flex gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="submitted">Submitted</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
               <SelectItem value="escalated">Escalated</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="hardware">Hardware</SelectItem>
-              <SelectItem value="software">Software</SelectItem>
-              <SelectItem value="network">Network</SelectItem>
-            </SelectContent>
-          </Select>
+          
           {hasRole(['admin', 'user']) && (
             <Button asChild>
-              <Link to="/issues/new">New Issue</Link>
+              <Link to="/issues/new">
+                <Plus className="mr-2 h-4 w-4" />
+                New Issue
+              </Link>
             </Button>
           )}
         </div>
       </div>
+      
+      <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList>
+          <TabsTrigger value="all">All Issues</TabsTrigger>
+          <TabsTrigger value="mine">My Issues</TabsTrigger>
+          {hasRole(['admin', 'employee']) && (
+            <TabsTrigger value="assigned">Assigned to Me</TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="all" className="mt-6">
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+        </TabsContent>
+        
+        <TabsContent value="mine" className="mt-6">
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+        </TabsContent>
+        
+        <TabsContent value="assigned" className="mt-6">
+          {renderIssueList(filteredIssues, isLoading, handleStatusChange)}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
 
-      <div className="rounded-md border shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead className="hidden md:table-cell">Submitted By</TableHead>
-              <TableHead className="hidden lg:table-cell">Type</TableHead>
-              <TableHead className="hidden md:table-cell">Severity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredIssues.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                  No issues found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredIssues.map((issue) => {
-                const submitter = getUserById(issue.submittedBy) as User;
-                
-                return (
-                  <TableRow key={issue.id} className="group">
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col">
-                        <span>{issue.title}</span>
-                        <span className="text-xs text-muted-foreground hidden sm:inline-block mt-1">
-                          {issue.description.substring(0, 60)}
-                          {issue.description.length > 60 ? '...' : ''}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {submitter?.name || 'Unknown'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="flex items-center gap-1">
-                        {getTypeIcon(issue.type)}
-                        <span className="capitalize">{issue.type}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge 
-                        variant="outline" 
-                        className={cn("capitalize", getSeverityColor(issue.severity))}
-                      >
-                        {issue.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={cn("capitalize flex w-fit items-center gap-1", getStatusColor(issue.status))}
-                      >
-                        {getStatusIcon(issue.status)}
-                        {issue.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {formatDate(issue.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/issues/${issue.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </Link>
-                          </DropdownMenuItem>
-                          {hasRole(['admin', 'employee']) && (
-                            <DropdownMenuItem asChild>
-                              <Link to={`/issues/${issue.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
-                          )}
-                          {hasRole(['admin', 'employee']) && onUpdateStatus && issue.status !== 'resolved' && (
-                            <DropdownMenuItem onClick={() => onUpdateStatus(issue.id, 'resolved')}>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Mark as Resolved
-                            </DropdownMenuItem>
-                          )}
-                          {hasRole(['admin', 'employee']) && onUpdateStatus && issue.status !== 'in-progress' && (
-                            <DropdownMenuItem onClick={() => onUpdateStatus(issue.id, 'in-progress')}>
-                              <Clock className="mr-2 h-4 w-4" />
-                              Mark as In Progress
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+const renderIssueList = (
+  issues: Issue[], 
+  isLoading: boolean, 
+  handleStatusChange: (id: string, status: IssueStatus) => void
+) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+  
+  if (issues.length === 0) {
+    return (
+      <div className="text-center p-8 border rounded-lg">
+        <p className="text-muted-foreground">No issues found</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {issues.map((issue) => (
+        <Card key={issue.id}>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-lg">{issue.title}</CardTitle>
+                <CardDescription>
+                  {formatDistanceToNow(new Date(issue.createdAt), { addSuffix: true })}
+                </CardDescription>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={`/issues/${issue.id}`}>View Details</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'submitted')}>
+                    Submitted
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'in-progress')}>
+                    In Progress
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'resolved')}>
+                    Resolved
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'escalated')}>
+                    Escalated
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {issue.description}
+            </p>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Badge variant="outline" className={`${getStatusColor(issue.status)} text-white`}>
+              {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+            </Badge>
+            <Badge variant="outline">{issue.type}</Badge>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   );
 };
