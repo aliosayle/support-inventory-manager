@@ -1,8 +1,7 @@
-
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { NavLink } from 'react-router-dom';
-import { Home, ClipboardList, Package, Users, BarChart, FileQuestion, LogOut } from 'lucide-react';
+import { Home, ClipboardList, Package, Users, BarChart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -72,20 +71,17 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { to: '/stock', icon: Package, label: 'Stock' },
     { to: '/users', icon: Users, label: 'Users' },
     { to: '/reports', icon: BarChart, label: 'Reports' },
-    { to: '/knowledge', icon: FileQuestion, label: 'Knowledge Base' },
   ];
   
   const employeeLinks = [
     { to: '/dashboard', icon: Home, label: 'Dashboard' },
     { to: '/issues', icon: ClipboardList, label: 'Issues' },
     { to: '/stock', icon: Package, label: 'Stock' },
-    { to: '/knowledge', icon: FileQuestion, label: 'Knowledge Base' },
   ];
   
   const userLinks = [
     { to: '/dashboard', icon: Home, label: 'Dashboard' },
     { to: '/issues', icon: ClipboardList, label: 'Issues' },
-    { to: '/knowledge', icon: FileQuestion, label: 'Knowledge Base' },
   ];
   
   let links = userLinks;
