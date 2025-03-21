@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,7 +43,7 @@ const Dashboard = () => {
         const { count: openIssues } = await supabase
           .from('issues')
           .select('*', { count: 'exact', head: true })
-          .in('status', ['open', 'in_progress']);
+          .in('status', ['submitted', 'in-progress']);
 
         // Fetch resolved issues count
         const { count: resolvedIssues } = await supabase
@@ -54,8 +55,8 @@ const Dashboard = () => {
         const { count: criticalIssues } = await supabase
           .from('issues')
           .select('*', { count: 'exact', head: true })
-          .eq('severity', 'critical')
-          .in('status', ['open', 'in_progress']);
+          .eq('severity', 'high')
+          .in('status', ['submitted', 'in-progress']);
 
         // Fetch inventory stats
         const { count: inventoryItems } = await supabase
@@ -65,7 +66,7 @@ const Dashboard = () => {
         const { count: lowStockItems } = await supabase
           .from('stock_items')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'low_stock');
+          .eq('status', 'repair');
 
         // Calculate average resolution time
         const { data: resolvedIssuesData } = await supabase
