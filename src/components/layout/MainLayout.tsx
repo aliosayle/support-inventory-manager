@@ -58,11 +58,12 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full bg-background overflow-hidden">
+      {/* Fixed sidebar */}
       {isAuthenticated && <Sidebar isOpen={isSidebarOpen} />}
       <div
         className={cn(
-          "flex flex-col flex-1 transition-all duration-300",
+          "flex flex-col flex-1 transition-all duration-300 overflow-hidden",
           isMobile
             ? "ml-0" // No margin on mobile
             : (isSidebarOpen ? "ml-64" : "ml-16") // Account for sidebar width

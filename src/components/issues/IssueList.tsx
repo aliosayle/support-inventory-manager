@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Issue, IssueStatus, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -36,12 +37,20 @@ import { MoreHorizontal, Plus, Search, UserCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { mapDbIssues, mapDbUsers } from '@/utils/dataMapping';
 import { toast } from '@/components/ui/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery } from '@tanstack/react-query';
+import { mapDbUsers } from '@/utils/dataMapping';
 
 interface IssueListProps {
-  issues?: Issue[];
-  isLoading?: boolean;
+  issues: Issue[];
+  isLoading: boolean;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  statusFilter: string;
+  setStatusFilter: (status: string) => void;
+  currentTab: string;
+  setCurrentTab: (tab: string) => void;
 }
 
 const getStatusColor = (status: IssueStatus) => {
@@ -59,76 +68,40 @@ const getStatusColor = (status: IssueStatus) => {
   }
 };
 
-const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: propIsLoading }) => {
+const IssueList: React.FC<IssueListProps> = ({ 
+  issues, 
+  isLoading, 
+  searchQuery, 
+  setSearchQuery, 
+  statusFilter, 
+  setStatusFilter, 
+  currentTab, 
+  setCurrentTab 
+}) => {
   const { user, hasRole } = useAuth();
-  const [issues, setIssues] = useState<Issue[]>(propIssues || []);
-  const [employees, setEmployees] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(propIsLoading || false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currentTab, setCurrentTab] = useState<string>('all');
-
-  useEffect(() => {
-    if (propIssues) {
-      setIssues(propIssues);
-    } else {
-      fetchIssues();
-    }
-  }, [propIssues]);
-
-  useEffect(() => {
-    if (hasRole(['admin'])) {
-      fetchEmployees();
-    }
-  }, [hasRole]);
-
-  const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('custom_users')
-        .select('*')
-        .eq('role', 'employee');
+  
+  // Fetch employees with React Query
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      if (!hasRole(['admin'])) return [];
       
-      if (error) {
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('custom_users')
+          .select('*')
+          .eq('role', 'employee');
+        
+        if (error) throw error;
+        return mapDbUsers(data || []);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        return [];
       }
-      
-      if (data) {
-        setEmployees(mapDbUsers(data));
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    }
-  };
-
-  const fetchIssues = async () => {
-    setIsLoading(true);
-    try {
-      let query = supabase.from('issues').select('*');
-      
-      if (user && !hasRole(['admin'])) {
-        if (hasRole(['employee'])) {
-          query = query.eq('assigned_to', user.id);
-        } else {
-          query = query.eq('submitted_by', user.id);
-        }
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        setIssues(mapDbIssues(data));
-      }
-    } catch (error) {
-      console.error('Error fetching issues:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    staleTime: 300000, // 5 minutes
+    enabled: hasRole(['admin'])
+  });
 
   const handleStatusChange = async (issueId: string, newStatus: IssueStatus) => {
     try {
@@ -137,20 +110,16 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', issueId);
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      setIssues(issues.map(issue => 
-        issue.id === issueId 
-          ? { ...issue, status: newStatus, updatedAt: new Date() } 
-          : issue
-      ));
-
       toast({
         title: "Status Updated",
         description: `Issue status changed to ${newStatus}`,
       });
+      
+      // Let React Query handle the cache invalidation
+      await queryClient.invalidateQueries({ queryKey: ['issues'] });
+      
     } catch (error) {
       console.error('Error updating issue status:', error);
       toast({
@@ -172,26 +141,17 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
         })
         .eq('id', issueId);
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      setIssues(issues.map(issue => 
-        issue.id === issueId 
-          ? { 
-              ...issue, 
-              assignedTo: employeeId, 
-              updatedAt: new Date(),
-              status: 'in-progress'
-            } 
-          : issue
-      ));
-
       const assignedEmployee = employees.find(emp => emp.id === employeeId);
       toast({
         title: "Issue Assigned",
         description: `Issue assigned to ${assignedEmployee?.name || 'employee'} and marked as in-progress`,
       });
+      
+      // Let React Query handle the cache invalidation
+      await queryClient.invalidateQueries({ queryKey: ['issues'] });
+      
     } catch (error) {
       console.error('Error assigning issue:', error);
       toast({
@@ -202,6 +162,7 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
     }
   };
 
+  // Filter issues based on search, status, and tab
   const filteredIssues = issues.filter(issue => {
     const matchesSearch = searchQuery === '' || 
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -264,15 +225,8 @@ const IssueList: React.FC<IssueListProps> = ({ issues: propIssues, isLoading: pr
           )}
         </TabsList>
         
-        <TabsContent value="all" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
-        </TabsContent>
-        
-        <TabsContent value="mine" className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
-        </TabsContent>
-        
-        <TabsContent value="assigned" className="mt-6">
+        {/* Render content only once */}
+        <TabsContent className="mt-6">
           {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']))}
         </TabsContent>
       </Tabs>
@@ -290,8 +244,23 @@ const renderIssueList = (
 ) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, index) => (
+          <Card key={index} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-2/3 mb-2" />
+              <Skeleton className="h-4 w-1/3" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-4/5" />
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-6 w-20" />
+            </CardFooter>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -391,5 +360,9 @@ const renderIssueList = (
     </div>
   );
 };
+
+// Add React Query client reference 
+import { useQueryClient } from '@tanstack/react-query';
+const queryClient = useQueryClient();
 
 export default IssueList;

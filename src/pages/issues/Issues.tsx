@@ -1,22 +1,25 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Issue } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
 import IssueList from '@/components/issues/IssueList';
 import { toast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { mapDbIssues } from '@/utils/dataMapping';
 
 const Issues = () => {
   const { user, hasRole } = useAuth();
-  const [displayedIssues, setDisplayedIssues] = useState<Issue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentTab, setCurrentTab] = useState('all');
 
-  useEffect(() => {
-    const fetchIssues = async () => {
-      if (!user) return;
+  // Use React Query for better caching and fetching
+  const { data: issues, isLoading } = useQuery({
+    queryKey: ['issues', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
       
-      setIsLoading(true);
       try {
         let query = supabase.from('issues').select('*');
         
@@ -38,21 +41,18 @@ const Issues = () => {
         }
         
         // Map database issues to frontend format
-        const mappedIssues = mapDbIssues(data || []);
-        setDisplayedIssues(mappedIssues);
+        return mapDbIssues(data || []);
       } catch (error: any) {
         toast({
           title: "Error",
           description: error.message || "Failed to fetch issues",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
+        return [];
       }
-    };
-    
-    fetchIssues();
-  }, [user, hasRole]);
+    },
+    staleTime: 60000, // 1 minute
+  });
 
   return (
     <div className="space-y-6">
@@ -67,7 +67,16 @@ const Issues = () => {
         </p>
       </div>
 
-      <IssueList issues={displayedIssues} isLoading={isLoading} />
+      <IssueList 
+        issues={issues || []} 
+        isLoading={isLoading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+      />
     </div>
   );
 };
