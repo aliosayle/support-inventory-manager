@@ -63,6 +63,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (!userId) return;
     
     try {
+      console.log('Fetching profile for user ID:', userId);
       const { data, error } = await supabase
         .from('custom_users')
         .select('*')
@@ -75,6 +76,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       if (data) {
+        console.log('Profile data:', data);
         setUser({
           id: data.id,
           name: data.name,
@@ -116,6 +118,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         ? email.replace('@example.com', '@gmail.com') 
         : email;
 
+      console.log('Attempting to log in with email:', normalizedEmail);
+      
       // In a real app, we would hash the password and compare with the stored hash
       // For demo purposes, we're directly comparing with the password_hash field
       // where all demo accounts have password='password'
@@ -124,11 +128,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .from('custom_users')
         .select('*')
         .eq('email', normalizedEmail)
-        .single();
+        .maybeSingle();
       
       if (error) {
+        console.error('Database error:', error);
+        throw new Error('Error querying user data');
+      }
+      
+      if (!data) {
+        console.error('User not found:', normalizedEmail);
         throw new Error('User not found');
       }
+      
+      console.log('User found:', data);
       
       // In a real app we would verify the password hash here
       // For demo purposes, we're just checking if password equals 'password'
@@ -155,6 +167,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: "Welcome back!",
       });
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message);
       toast({
         title: "Login failed",
@@ -177,14 +190,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         ? email.replace('@example.com', '@gmail.com') 
         : email;
       
+      console.log('Attempting to sign up user:', normalizedEmail);
+      
       // Check if user exists
       const { data: existingUser } = await supabase
         .from('custom_users')
         .select('id')
         .eq('email', normalizedEmail)
-        .single();
+        .maybeSingle();
       
       if (existingUser) {
+        console.log('User already exists:', existingUser);
         throw new Error('User already exists. Please login instead.');
       }
       
@@ -205,8 +221,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .single();
       
       if (error) {
+        console.error('Error creating user:', error);
         throw error;
       }
+      
+      console.log('User created:', data);
       
       // Store user ID in localStorage for session management
       localStorage.setItem('userId', data.id);
@@ -227,6 +246,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: "You have successfully signed up.",
       });
     } catch (err: any) {
+      console.error('Signup error:', err);
       setError(err.message);
       toast({
         title: "Signup failed",

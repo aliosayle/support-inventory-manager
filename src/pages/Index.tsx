@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { login, isAuthenticated } = useAuth();
@@ -33,6 +34,7 @@ const Index = () => {
       navigate('/dashboard');
     } catch (error) {
       // Error already handled in auth context
+      console.log('Login failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -46,23 +48,53 @@ const Index = () => {
       setEmail(email);
       setPassword('password'); // All demo users have password='password'
       
-      // Try to log in first
-      try {
-        // Login will handle normalizing the email
-        await login(email, 'password');
-        navigate('/dashboard');
-        return;
-      } catch (error) {
-        console.log("Login failed, user might not exist yet");
-        // If the demo user doesn't exist yet, it will be created in the next step
+      // Check if demo user already exists
+      const normalizedEmail = email.replace('@example.com', '@gmail.com');
+      
+      const { data: existingUser } = await supabase
+        .from('custom_users')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+        
+      if (!existingUser) {
+        console.log('Demo user does not exist, creating:', email);
+        
+        // Create the demo user if it doesn't exist
+        const passwordHash = '$2a$10$b8Ycw7tIHgsfoLHyYQ.YaOG45hR1askYWQuALEbTZ9bR6T1qsQzLa'; // Pretend hash of 'password'
+        
+        const { error } = await supabase
+          .from('custom_users')
+          .insert({
+            email: normalizedEmail,
+            password_hash: passwordHash,
+            name,
+            role,
+            department
+          });
+          
+        if (error) {
+          console.error('Error creating demo user:', error);
+          throw new Error(`Failed to create demo user: ${error.message}`);
+        }
+        
+        console.log('Demo user created successfully');
+      } else {
+        console.log('Demo user already exists:', existingUser);
       }
       
-      // At this point we know the user already exists in the custom_users table
-      // because we added them in our SQL migration, so we just show an error message
-      toast({
-        title: "Demo Account Info",
-        description: `Use email: ${email} with password: password to log in.`,
-      });
+      // Now try to log in
+      try {
+        await login(normalizedEmail, 'password');
+        navigate('/dashboard');
+      } catch (loginError) {
+        console.error('Error logging in with demo user:', loginError);
+        toast({
+          title: "Demo Login Error",
+          description: "Could not log in with the demo account. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       console.error("Error with demo user:", error);
       toast({
