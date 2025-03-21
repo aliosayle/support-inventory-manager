@@ -351,6 +351,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_issue_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_issues: number
+          open_issues: number
+          resolved_issues: number
+          avg_resolution_time: number
+        }[]
+      }
+      get_issues_by_month: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          month: number
+          count: number
+        }[]
+      }
       get_issues_by_status: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -363,6 +379,13 @@ export type Database = {
         Returns: {
           type: Database["public"]["Enums"]["issue_type"]
           count: number
+        }[]
+      }
+      get_resolution_time_by_week: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          week_number: number
+          avg_hours: number
         }[]
       }
     }

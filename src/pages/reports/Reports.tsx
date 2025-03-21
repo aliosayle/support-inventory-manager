@@ -22,11 +22,34 @@ import { useQuery } from '@tanstack/react-query';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Define proper types for our database function returns
+type IssueByMonth = {
+  month: number;
+  count: number;
+}
+
+type IssueByType = {
+  type: string;
+  count: number;
+}
+
+type ResolutionTimeByWeek = {
+  week_number: number;
+  avg_hours: number;
+}
+
+type IssueStats = {
+  total_issues: number;
+  open_issues: number;
+  resolved_issues: number;
+  avg_resolution_time: number;
+}
+
 const Reports = () => {
   const [activeTab, setActiveTab] = useState("overview");
   
   // Fetch issues by month data
-  const { data: issuesByMonth = [], isLoading: isLoadingMonthly } = useQuery({
+  const { data: issuesByMonth = [], isLoading: isLoadingMonthly } = useQuery<IssueByMonth[]>({
     queryKey: ['issuesByMonth'],
     queryFn: async () => {
       try {
@@ -40,13 +63,14 @@ const Reports = () => {
         
         // If no data, create empty data structure
         if (!data || data.length === 0) {
-          return months.map(name => ({ name, count: 0 }));
+          return months.map((name, index) => ({ name, count: 0, month: index + 1 }));
         }
         
         // Format data from database
-        return data.map((item: any) => ({
+        return data.map((item: IssueByMonth) => ({
           name: months[item.month - 1], // Convert month number to name
-          count: parseInt(item.count)
+          count: parseInt(item.count.toString()),
+          month: item.month
         }));
       } catch (error) {
         console.error('Error fetching issues by month:', error);
@@ -57,7 +81,7 @@ const Reports = () => {
   });
   
   // Fetch issues by type data
-  const { data: issuesByType = [], isLoading: isLoadingTypes } = useQuery({
+  const { data: issuesByType = [], isLoading: isLoadingTypes } = useQuery<IssueByType[]>({
     queryKey: ['issuesByType'],
     queryFn: async () => {
       try {
@@ -66,9 +90,9 @@ const Reports = () => {
         if (error) throw error;
         
         // Format data for chart
-        return data.map((item: any) => ({
+        return data.map((item: IssueByType) => ({
           name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
-          value: parseInt(item.count)
+          value: parseInt(item.count.toString())
         }));
       } catch (error) {
         console.error('Error fetching issues by type:', error);
@@ -79,7 +103,7 @@ const Reports = () => {
   });
   
   // Fetch resolution time data
-  const { data: issueResolutionTime = [], isLoading: isLoadingResolution } = useQuery({
+  const { data: issueResolutionTime = [], isLoading: isLoadingResolution } = useQuery<ResolutionTimeByWeek[]>({
     queryKey: ['resolutionTime'],
     queryFn: async () => {
       try {
@@ -91,13 +115,15 @@ const Reports = () => {
         if (!data || data.length === 0) {
           return Array.from({ length: 8 }, (_, i) => ({ 
             name: `Week ${i + 1}`, 
-            time: 0 
+            time: 0,
+            week_number: i + 1
           }));
         }
         
-        return data.map((item: any) => ({
+        return data.map((item: ResolutionTimeByWeek) => ({
           name: `Week ${item.week_number}`,
-          time: parseFloat(item.avg_hours.toFixed(1))
+          time: parseFloat(item.avg_hours.toFixed(1)),
+          week_number: item.week_number
         }));
       } catch (error) {
         console.error('Error fetching resolution time:', error);
@@ -108,7 +134,7 @@ const Reports = () => {
   });
   
   // Fetch issues stats
-  const { data: issueStats = { total: 0, open: 0, resolved: 0 }, isLoading: isLoadingStats } = useQuery({
+  const { data: issueStats, isLoading: isLoadingStats } = useQuery<IssueStats>({
     queryKey: ['issueStats'],
     queryFn: async () => {
       try {
@@ -117,24 +143,42 @@ const Reports = () => {
         if (error) throw error;
         
         if (!data || data.length === 0) {
-          return { total: 0, open: 0, resolved: 0, avg_resolution: 0 };
+          return { 
+            total_issues: 0, 
+            open_issues: 0, 
+            resolved_issues: 0, 
+            avg_resolution_time: 0 
+          };
         }
         
         return {
-          total: parseInt(data[0].total_issues || 0),
-          open: parseInt(data[0].open_issues || 0),
-          resolved: parseInt(data[0].resolved_issues || 0),
-          avg_resolution: parseFloat(data[0].avg_resolution_time || 0)
+          total_issues: parseInt(data[0].total_issues.toString()),
+          open_issues: parseInt(data[0].open_issues.toString()),
+          resolved_issues: parseInt(data[0].resolved_issues.toString()),
+          avg_resolution_time: parseFloat(data[0].avg_resolution_time.toFixed(1))
         };
       } catch (error) {
         console.error('Error fetching issue stats:', error);
-        return { total: 0, open: 0, resolved: 0, avg_resolution: 0 };
+        return { 
+          total_issues: 0, 
+          open_issues: 0, 
+          resolved_issues: 0, 
+          avg_resolution_time: 0 
+        };
       }
     },
     staleTime: 300000, // 5 minutes
   });
   
   const isLoading = isLoadingMonthly || isLoadingTypes || isLoadingResolution || isLoadingStats;
+  
+  // Provide default stats object to avoid undefined errors
+  const stats = issueStats || { 
+    total_issues: 0, 
+    open_issues: 0, 
+    resolved_issues: 0, 
+    avg_resolution_time: 0 
+  };
   
   return (
     <div className="space-y-6">
@@ -173,7 +217,7 @@ const Reports = () => {
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold">{issueStats.total}</div>
+                    <div className="text-3xl font-bold">{stats.total_issues}</div>
                     <p className="text-xs text-muted-foreground">
                       All tracked issues
                     </p>
@@ -192,10 +236,10 @@ const Reports = () => {
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold">{issueStats.open}</div>
+                    <div className="text-3xl font-bold">{stats.open_issues}</div>
                     <p className="text-xs text-muted-foreground">
-                      {issueStats.total > 0 ? 
-                        `${Math.round((issueStats.open / issueStats.total) * 100)}% of total issues` : 
+                      {stats.total_issues > 0 ? 
+                        `${Math.round((stats.open_issues / stats.total_issues) * 100)}% of total issues` : 
                         'No issues recorded'}
                     </p>
                   </>
@@ -214,10 +258,10 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-3xl font-bold">
-                      {issueStats.avg_resolution.toFixed(1)} hrs
+                      {stats.avg_resolution_time.toFixed(1)} hrs
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      For {issueStats.resolved} resolved issues
+                      For {stats.resolved_issues} resolved issues
                     </p>
                   </>
                 )}
