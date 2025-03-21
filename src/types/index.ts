@@ -13,30 +13,30 @@ export interface User {
   role: UserRole;
   department?: string;
   avatar?: string;
-  created_at: Date;
+  createdAt: Date;
 }
 
 export interface Issue {
   id: string;
   title: string;
   description: string;
-  submitted_by: string; // User ID
-  assigned_to?: string; // User ID (Employee or Admin)
+  submittedBy: string; // User ID
+  assignedTo?: string; // User ID (Employee or Admin)
   severity: IssueSeverity;
   type: IssueType;
   status: IssueStatus;
-  created_at: Date;
-  updated_at: Date;
-  resolved_at?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  resolvedAt?: Date;
   comments?: IssueComment[];
 }
 
 export interface IssueComment {
   id: string;
-  issue_id: string;
-  user_id: string;
+  issueId: string;
+  userId: string;
   text: string;
-  created_at: Date;
+  createdAt: Date;
 }
 
 export interface StockItem {
@@ -47,8 +47,8 @@ export interface StockItem {
   quantity: number;
   manufacturer?: string;
   model?: string;
-  serial_number?: string;
-  purchase_date?: Date;
+  serialNumber?: string;
+  purchaseDate?: Date;
   price?: number;
   location?: string;
   status: StockStatus;
@@ -57,17 +57,17 @@ export interface StockItem {
 
 export interface StockUsage {
   id: string;
-  stock_item_id: string;
-  issue_id?: string;
+  stockItemId: string;
+  issueId?: string;
   quantity: number;
-  assigned_to?: string; // User ID
+  assignedTo?: string; // User ID
   date: Date;
   notes?: string;
 }
 
 export interface IssueStockItem {
-  issue_id: string;
-  stock_item_id: string;
+  issueId: string;
+  stockItemId: string;
 }
 
 export interface DashboardStats {

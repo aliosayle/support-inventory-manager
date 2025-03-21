@@ -10,7 +10,7 @@ const NewIssue = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (issueData: Partial<Issue>) => {
+  const handleSubmit = async (issueData: Partial<Issue>) => {
     setIsLoading(true);
     
     try {
