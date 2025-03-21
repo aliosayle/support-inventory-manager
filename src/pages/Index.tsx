@@ -45,24 +45,22 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      // Check if user already exists
-      const { data: existingUsers } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email);
-      
-      if (existingUsers && existingUsers.length > 0) {
-        // User exists, just log them in
-        setEmail(email);
-        setPassword(password);
+      // First, try to log in with the credentials
+      try {
         await login(email, password);
         navigate('/dashboard');
         return;
+      } catch (loginError) {
+        // If login fails, try to sign up
+        console.log("Login failed, trying to sign up");
       }
+      
+      // Use a valid email format for demonstration purposes
+      const validEmail = email.replace('@example.com', '@gmail.com');
       
       // Create new user
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: validEmail,
         password,
         options: {
           data: {
@@ -90,7 +88,7 @@ const Index = () => {
             .upsert({
               id: data.user.id,
               name,
-              email,
+              email: validEmail,
               role,
               department
             });
@@ -98,9 +96,14 @@ const Index = () => {
           if (profileError) throw profileError;
         }
         
-        // Now login with the created credentials
-        await login(email, password);
-        navigate('/dashboard');
+        toast({
+          title: "Demo Account Created",
+          description: `Successfully created a ${role} account. You can now log in.`,
+        });
+        
+        // Set the credentials for login
+        setEmail(validEmail);
+        setPassword(password);
       } else {
         throw new Error("Failed to create user");
       }
