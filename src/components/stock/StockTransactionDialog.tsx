@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { recordStockTransaction, fetchUsers } from '@/services/stockService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 interface User {
   id: string;
@@ -67,6 +67,7 @@ export function StockTransactionDialog({
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUserList, setShowUserList] = useState(false);
   
   const form = useForm<StockTransactionFormValues>({
     resolver: zodResolver(stockTransactionSchema),
@@ -91,6 +92,12 @@ export function StockTransactionDialog({
     }
     
     loadUsers();
+
+    // Reset search when dialog opens/closes
+    return () => {
+      setSearchTerm('');
+      setShowUserList(false);
+    };
   }, [isOpen, transactionType]);
 
   const filteredUsers = users.filter(user => 
@@ -119,6 +126,12 @@ export function StockTransactionDialog({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUserSelect = (userId: string) => {
+    form.setValue('assignedTo', userId);
+    setSearchTerm('');
+    setShowUserList(false);
   };
 
   return (
@@ -168,33 +181,53 @@ export function StockTransactionDialog({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Assign To *</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a user" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <Input 
-                          placeholder="Search..." 
-                          className="mb-2" 
+                    <div className="relative">
+                      <div className="relative">
+                        <Input
+                          placeholder="Search users..."
                           value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setShowUserList(true);
+                          }}
+                          onFocus={() => setShowUserList(true)}
+                          className="pr-10"
                         />
-                        {filteredUsers.length === 0 ? (
-                          <p className="text-center py-2 text-sm text-muted-foreground">No users found</p>
-                        ) : (
-                          filteredUsers.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name} {user.department ? `(${user.department})` : ''}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      
+                      {/* Show selected user */}
+                      {field.value && !showUserList && (
+                        <div className="mt-1 p-2 bg-muted rounded-md">
+                          {users.find(u => u.id === field.value)?.name || 'Selected user'}
+                        </div>
+                      )}
+                      
+                      {/* Dropdown list */}
+                      {showUserList && (
+                        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-popover border rounded-md shadow-md">
+                          {filteredUsers.length > 0 ? (
+                            filteredUsers.map(user => (
+                              <div
+                                key={user.id}
+                                className="p-2 hover:bg-accent cursor-pointer flex flex-col"
+                                onClick={() => handleUserSelect(user.id)}
+                              >
+                                <span className="font-medium">{user.name}</span>
+                                <span className="text-xs text-muted-foreground">{user.email}</span>
+                                {user.department && (
+                                  <span className="text-xs text-muted-foreground">{user.department}</span>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">No users found</div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <input type="hidden" {...field} />
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
