@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Issue } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import IssueForm from '@/components/issues/IssueForm';
@@ -10,20 +10,26 @@ import { useAuth } from '@/context/AuthContext';
 
 const NewIssue = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasCheckedPermission, setHasCheckedPermission] = useState(false);
   const { hasRole, hasPermission } = useAuth();
 
   // Redirect if user doesn't have permission to create issues
   useEffect(() => {
-    if (!hasRole(['admin']) && !hasPermission('create_issue')) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to create issues.",
-        variant: "destructive",
-      });
-      navigate('/issues');
+    // Avoid running this effect more than once to prevent infinite redirects
+    if (!hasCheckedPermission) {
+      if (!hasRole(['admin']) && !hasPermission('create_issue')) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to create issues.",
+          variant: "destructive",
+        });
+        navigate('/issues', { replace: true });
+      }
+      setHasCheckedPermission(true);
     }
-  }, [hasRole, hasPermission, navigate]);
+  }, [hasRole, hasPermission, navigate, hasCheckedPermission]);
 
   const handleSubmit = async (issueData: Partial<Issue>) => {
     setIsLoading(true);

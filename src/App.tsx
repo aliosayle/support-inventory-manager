@@ -36,7 +36,8 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        {/* Using window.location.pathname as the basename if inside an iframe */}
+        <BrowserRouter basename={window.self !== window.top ? window.location.pathname : undefined}>
           <Routes>
             <Route path="/" element={<Index />} />
             

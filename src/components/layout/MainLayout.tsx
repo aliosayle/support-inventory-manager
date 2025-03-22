@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from '@/components/ui/use-toast';
 
 interface MainLayoutProps {
   requireAuth?: boolean;
@@ -15,8 +16,10 @@ interface MainLayoutProps {
 const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps) => {
   const { isAuthenticated, hasRole, hasPermission, isLoading, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Update sidebar state based on device size
   useEffect(() => {
@@ -34,6 +37,65 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
     }
   }, [location.pathname, isMobile]);
 
+  // Handle permission-based redirects
+  useEffect(() => {
+    if (isLoading || isRedirecting || !user) {
+      return;
+    }
+
+    // Define a redirect handler to avoid duplication
+    const handleUnauthorizedAccess = (targetPath: string, message: string) => {
+      if (location.pathname !== targetPath) {
+        setIsRedirecting(true);
+        toast({
+          title: "Access Denied",
+          description: message,
+          variant: "destructive",
+        });
+        navigate(targetPath, { replace: true });
+      }
+    };
+
+    // Check permissions for various routes
+    if (location.pathname === '/dashboard' && !hasPermission('view_reports') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/issues', "You don't have permission to view the dashboard.");
+      return;
+    }
+    
+    if (location.pathname === '/reports' && !hasPermission('view_reports') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/issues', "You don't have permission to view reports.");
+      return;
+    }
+    
+    if ((location.pathname === '/users' || location.pathname === '/users/new' || 
+        (location.pathname.startsWith('/users/') && location.pathname.includes('/edit'))) && 
+        !hasPermission('manage_users') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/issues', "You don't have permission to manage users.");
+      return;
+    }
+
+    if (location.pathname === '/issues' && !hasPermission('view_issues') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/dashboard', "You don't have permission to view issues.");
+      return;
+    }
+    
+    if (location.pathname === '/issues/new' && !hasPermission('create_issue') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/issues', "You don't have permission to create issues.");
+      return;
+    }
+    
+    if (location.pathname.startsWith('/issues/') && location.pathname !== '/issues/new' && 
+        !hasPermission('view_issues') && !hasRole(['admin'])) {
+      handleUnauthorizedAccess('/dashboard', "You don't have permission to view issue details.");
+      return;
+    }
+
+    // Reset redirecting state if no redirects needed
+    if (isRedirecting) {
+      setIsRedirecting(false);
+    }
+  }, [location.pathname, isLoading, user, hasRole, hasPermission, navigate, isRedirecting]);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
@@ -50,50 +112,6 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
   // Auth check
   if (requireAuth && !isAuthenticated) {
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
-  }
-
-  // Permission-based redirects
-  if (user) {
-    // Redirect from dashboard if user doesn't have view_reports permission
-    if (location.pathname === '/dashboard' && !hasPermission('view_reports') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-    
-    // Redirect from reports if user doesn't have view_reports permission
-    if (location.pathname === '/reports' && !hasPermission('view_reports') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-    
-    // Redirect from users if user doesn't have manage_users permission
-    if (location.pathname === '/users' && !hasPermission('manage_users') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-    
-    // Redirect from new user form if user doesn't have manage_users permission
-    if (location.pathname === '/users/new' && !hasPermission('manage_users') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-    
-    // Redirect from edit user form if user doesn't have manage_users permission
-    if (location.pathname.startsWith('/users/') && location.pathname.includes('/edit') 
-        && !hasPermission('manage_users') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-
-    // Redirect from issues page if user doesn't have view_issues permission
-    if (location.pathname === '/issues' && !hasPermission('view_issues') && !hasRole('admin')) {
-      return <Navigate to="/dashboard" replace />;
-    }
-    
-    // Redirect from new issue page if user doesn't have create_issue permission
-    if (location.pathname === '/issues/new' && !hasPermission('create_issue') && !hasRole('admin')) {
-      return <Navigate to="/issues" replace />;
-    }
-    
-    // Redirect from issue detail if user doesn't have view_issues permission
-    if (location.pathname.startsWith('/issues/') && !hasPermission('view_issues') && !hasRole('admin')) {
-      return <Navigate to="/dashboard" replace />;
-    }
   }
 
   // Role check for protected routes
