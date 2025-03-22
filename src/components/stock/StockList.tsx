@@ -38,6 +38,7 @@ interface StockListProps {
   viewMode?: 'card' | 'list';
   onStockIn?: (item: StockItem) => void;
   onStockOut?: (item: StockItem) => void;
+  canManageTransactions?: boolean;
 }
 
 const StockList = ({ 
@@ -45,7 +46,8 @@ const StockList = ({
   isLoading = false, 
   viewMode = 'card',
   onStockIn,
-  onStockOut
+  onStockOut,
+  canManageTransactions = false
 }: StockListProps) => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -317,7 +319,7 @@ const StockList = ({
                     <div className="text-muted-foreground">Purchased:</div>
                     <div className="text-right font-medium">{formatDate(item.purchaseDate)}</div>
                   </div>
-                  {(onStockIn || onStockOut) && (
+                  {(onStockIn || onStockOut) && canManageTransactions && (
                     <div className="flex justify-between gap-2 mt-4">
                       <Button 
                         variant="outline" 
