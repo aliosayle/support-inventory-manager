@@ -73,20 +73,9 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
       handleUnauthorizedAccess('/issues', "You don't have permission to manage users.");
       return;
     }
-
-    if (location.pathname === '/issues' && !hasPermission('view_issues') && !hasRole(['admin'])) {
-      handleUnauthorizedAccess('/dashboard', "You don't have permission to view issues.");
-      return;
-    }
     
     if (location.pathname === '/issues/new' && !hasPermission('create_issue') && !hasRole(['admin'])) {
       handleUnauthorizedAccess('/issues', "You don't have permission to create issues.");
-      return;
-    }
-    
-    if (location.pathname.startsWith('/issues/') && location.pathname !== '/issues/new' && 
-        !hasPermission('view_issues') && !hasRole(['admin'])) {
-      handleUnauthorizedAccess('/dashboard', "You don't have permission to view issue details.");
       return;
     }
 

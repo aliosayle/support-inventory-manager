@@ -13,13 +13,20 @@ const NewIssue = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [hasCheckedPermission, setHasCheckedPermission] = useState(false);
-  const { hasRole, hasPermission } = useAuth();
+  const { user, hasRole, hasPermission } = useAuth();
 
   // Redirect if user doesn't have permission to create issues
   useEffect(() => {
     // Avoid running this effect more than once to prevent infinite redirects
     if (!hasCheckedPermission) {
-      if (!hasRole(['admin']) && !hasPermission('create_issue')) {
+      if (!user) {
+        toast({
+          title: "Access Denied",
+          description: "You must be logged in to create issues.",
+          variant: "destructive",
+        });
+        navigate('/', { replace: true });
+      } else if (!hasRole(['admin']) && !hasPermission('create_issue')) {
         toast({
           title: "Access Denied",
           description: "You don't have permission to create issues.",
@@ -29,7 +36,7 @@ const NewIssue = () => {
       }
       setHasCheckedPermission(true);
     }
-  }, [hasRole, hasPermission, navigate, hasCheckedPermission]);
+  }, [hasRole, hasPermission, navigate, hasCheckedPermission, user]);
 
   const handleSubmit = async (issueData: Partial<Issue>) => {
     setIsLoading(true);

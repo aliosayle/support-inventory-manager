@@ -18,32 +18,34 @@ const Issues = () => {
   const [currentTab, setCurrentTab] = useState('mine'); // Default to 'mine' for regular users
   const [hasCheckedPermission, setHasCheckedPermission] = useState(false);
 
-  // Check if user has permission to view issues
+  // Check if user has permission to access issues
   useEffect(() => {
     // Only check once to prevent infinite redirects
     if (!hasCheckedPermission) {
-      if (!hasRole(['admin']) && !hasPermission('view_issues')) {
+      // All users can see the issues page for their own issues
+      // Only redirect if there's no user (not authenticated)
+      if (!user) {
         toast({
           title: "Access Denied",
-          description: "You don't have permission to view issues.",
+          description: "You must be logged in to view issues.",
           variant: "destructive",
         });
         navigate('/dashboard', { replace: true });
       }
       setHasCheckedPermission(true);
     }
-  }, [hasRole, hasPermission, navigate, hasCheckedPermission]);
+  }, [user, navigate, hasCheckedPermission]);
 
-  // Set default tab based on user role
+  // Set default tab based on user role and permissions
   useEffect(() => {
-    if (hasRole(['admin'])) {
+    if (hasRole(['admin']) || hasPermission('view_issues')) {
       setCurrentTab('all');
     } else if (hasRole(['employee'])) {
       setCurrentTab('assigned');
     } else {
       setCurrentTab('mine');
     }
-  }, [hasRole]);
+  }, [hasRole, hasPermission]);
 
   // Use React Query for better caching and fetching
   const { data: issues, isLoading } = useQuery({
@@ -54,8 +56,8 @@ const Issues = () => {
       try {
         let query = supabase.from('issues').select('*');
         
-        // Filter issues based on user role
-        if (!hasRole(['admin'])) {
+        // Filter issues based on user role and permissions
+        if (!hasRole(['admin']) && !hasPermission('view_issues')) {
           if (hasRole(['employee'])) {
             // Employee sees only assigned issues
             query = query.eq('assigned_to', user.id);
@@ -92,7 +94,7 @@ const Issues = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Issues</h1>
         <p className="text-muted-foreground">
-          {hasRole(['admin']) 
+          {hasRole(['admin']) || hasPermission('view_issues') 
             ? 'Manage and track all IT support issues.'
             : hasRole(['employee'])
               ? 'View and manage your assigned issues.'
@@ -109,6 +111,7 @@ const Issues = () => {
         setStatusFilter={setStatusFilter}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        canSeeAllIssues={hasRole(['admin']) || hasPermission('view_issues')}
       />
     </div>
   );

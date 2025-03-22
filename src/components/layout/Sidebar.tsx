@@ -65,12 +65,12 @@ const SidebarItem = ({ to, icon: Icon, label, isOpen }: SidebarItemProps) => {
 };
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
-  const { hasRole, hasPermission, logout } = useAuth();
+  const { hasRole, hasPermission, logout, user } = useAuth();
   
   // Define links with required permissions
   const links = [
     { to: '/dashboard', icon: BarChart, label: 'Dashboard', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin', 'employee'] as UserRole[] },
-    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: 'view_issues' as Permission, requiredRoles: ['admin', 'employee', 'user'] as UserRole[] },
+    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: null, requiredRoles: [] as UserRole[] }, // Allow all users to see Issues
     { to: '/stock', icon: Package, label: 'Stock', requiredPermission: null, requiredRoles: ['admin', 'employee'] as UserRole[] },
     { to: '/users', icon: Users, label: 'Users', requiredPermission: 'manage_users' as Permission, requiredRoles: ['admin'] as UserRole[] },
     { to: '/reports', icon: BarChart, label: 'Reports', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin'] as UserRole[] },
@@ -79,13 +79,18 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   
   // Filter links based on user permissions and roles
   const filteredLinks = links.filter(link => {
+    // If this is the issues link, always show it if user is logged in
+    if (link.to === '/issues' && user) {
+      return true;
+    }
+    
     // Check if user has the required permission (if specified)
     const hasRequiredPermission = link.requiredPermission 
       ? hasPermission(link.requiredPermission) 
       : true;
       
     // Check if user has one of the required roles
-    const hasRequiredRole = link.requiredRoles 
+    const hasRequiredRole = link.requiredRoles.length > 0
       ? link.requiredRoles.some(role => hasRole(role))
       : true;
       
