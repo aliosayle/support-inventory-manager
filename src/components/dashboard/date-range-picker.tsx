@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -11,7 +12,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface DateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+// Define the interface without extending HTMLAttributes to avoid conflicts
+interface DateRangePickerProps {
+  className?: string;
   value?: DateRange | undefined;
   onChange?: (value: DateRange | undefined) => void;
 }
