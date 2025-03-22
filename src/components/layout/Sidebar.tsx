@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom';
 import { ClipboardList, Package, Users, BarChart, ShoppingCart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Permission, UserRole } from '@/types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -68,12 +69,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   
   // Define links with required permissions
   const links = [
-    { to: '/dashboard', icon: BarChart, label: 'Dashboard', requiredPermission: 'view_reports', requiredRoles: ['admin', 'employee'] },
-    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] },
-    { to: '/stock', icon: Package, label: 'Stock', requiredPermission: null, requiredRoles: ['admin', 'employee'] },
-    { to: '/users', icon: Users, label: 'Users', requiredPermission: 'manage_users', requiredRoles: ['admin'] },
-    { to: '/reports', icon: BarChart, label: 'Reports', requiredPermission: 'view_reports', requiredRoles: ['admin'] },
-    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] },
+    { to: '/dashboard', icon: BarChart, label: 'Dashboard', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin', 'employee'] as UserRole[] },
+    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] as UserRole[] },
+    { to: '/stock', icon: Package, label: 'Stock', requiredPermission: null, requiredRoles: ['admin', 'employee'] as UserRole[] },
+    { to: '/users', icon: Users, label: 'Users', requiredPermission: 'manage_users' as Permission, requiredRoles: ['admin'] as UserRole[] },
+    { to: '/reports', icon: BarChart, label: 'Reports', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin'] as UserRole[] },
+    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] as UserRole[] },
   ];
   
   // Filter links based on user permissions and roles
