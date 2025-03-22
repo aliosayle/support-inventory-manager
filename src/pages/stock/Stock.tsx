@@ -88,12 +88,12 @@ const Stock = () => {
         items={items} 
         isLoading={isLoading} 
         viewMode={viewMode} 
-        onStockIn={handleStockIn}
-        onStockOut={handleStockOut}
+        onStockIn={canManageTransactions ? handleStockIn : undefined}
+        onStockOut={canManageTransactions ? handleStockOut : undefined}
         canManageTransactions={canManageTransactions}
       />
 
-      {canManageTransactions && (
+      {canManageTransactions && selectedItem && (
         <StockTransactionDialog
           stockItem={selectedItem}
           transactionType={transactionType}
@@ -104,6 +104,6 @@ const Stock = () => {
       )}
     </div>
   );
-};
+}
 
 export default Stock;

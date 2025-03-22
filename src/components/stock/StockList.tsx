@@ -264,20 +264,23 @@ const StockList = ({
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => onStockIn?.(item)}
-                          disabled={!onStockIn}
-                        >
-                          <ArrowDown className="mr-2 h-4 w-4" />
-                          Stock In
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => onStockOut?.(item)}
-                          disabled={!onStockOut || item.quantity <= 0}
-                        >
-                          <ArrowUp className="mr-2 h-4 w-4" />
-                          Stock Out
-                        </DropdownMenuItem>
+                        {canManageTransactions && onStockIn && (
+                          <DropdownMenuItem 
+                            onClick={() => onStockIn(item)}
+                          >
+                            <ArrowDown className="mr-2 h-4 w-4" />
+                            Stock In
+                          </DropdownMenuItem>
+                        )}
+                        {canManageTransactions && onStockOut && (
+                          <DropdownMenuItem 
+                            onClick={() => onStockOut(item)}
+                            disabled={item.quantity <= 0}
+                          >
+                            <ArrowUp className="mr-2 h-4 w-4" />
+                            Stock Out
+                          </DropdownMenuItem>
+                        )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -390,7 +393,7 @@ const StockList = ({
                             <Edit size={16} />
                           </Link>
                         </Button>
-                        {onStockIn && (
+                        {canManageTransactions && onStockIn && (
                           <Button 
                             variant="ghost" 
                             size="icon"
@@ -399,7 +402,7 @@ const StockList = ({
                             <ArrowDown size={16} />
                           </Button>
                         )}
-                        {onStockOut && (
+                        {canManageTransactions && onStockOut && (
                           <Button 
                             variant="ghost" 
                             size="icon"
