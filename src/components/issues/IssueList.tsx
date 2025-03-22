@@ -78,7 +78,7 @@ const IssueList: React.FC<IssueListProps> = ({
   currentTab, 
   setCurrentTab 
 }) => {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   
   // Fetch employees with React Query
@@ -207,7 +207,8 @@ const IssueList: React.FC<IssueListProps> = ({
             </SelectContent>
           </Select>
           
-          {hasRole(['admin', 'user']) && (
+          {/* Only show the New Issue button if user has permission */}
+          {(hasRole(['admin']) || hasPermission('create_issue')) && (
             <Button asChild>
               <Link to="/issues/new">
                 <Plus className="mr-2 h-4 w-4" />
@@ -228,7 +229,17 @@ const IssueList: React.FC<IssueListProps> = ({
         </TabsList>
         
         <TabsContent value={currentTab} className="mt-6">
-          {renderIssueList(filteredIssues, isLoading, handleStatusChange, handleAssignIssue, employees, hasRole(['admin']), hasRole(['employee']), user?.id)}
+          {renderIssueList(
+            filteredIssues,
+            isLoading,
+            handleStatusChange,
+            handleAssignIssue,
+            employees,
+            hasRole(['admin']),
+            hasRole(['employee']),
+            user?.id,
+            hasPermission
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -243,7 +254,8 @@ const renderIssueList = (
   employees: User[],
   isAdmin: boolean,
   isEmployee: boolean,
-  userId?: string
+  userId?: string,
+  hasPermission?: (permissions: string | string[]) => boolean
 ) => {
   if (isLoading) {
     return (
@@ -302,8 +314,11 @@ const renderIssueList = (
                     <Link to={`/issues/${issue.id}`}>View Details</Link>
                   </DropdownMenuItem>
                   
-                  {/* Only show status change options for admins or employees (who don't own the issue) */}
-                  {(isAdmin || (isEmployee && issue.submittedBy !== userId)) && (
+                  {/* Only show status change options for users with proper permissions */}
+                  {(isAdmin || 
+                    (isEmployee && issue.submittedBy !== userId) || 
+                    hasPermission?.('resolve_issue')
+                  ) && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel>Change Status</DropdownMenuLabel>
@@ -322,7 +337,8 @@ const renderIssueList = (
                     </>
                   )}
                   
-                  {isAdmin && (
+                  {/* Only show assign functionality for admins or users with assign_issue permission */}
+                  {(isAdmin || hasPermission?.('assign_issue')) && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuSub>

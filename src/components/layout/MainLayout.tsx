@@ -79,6 +79,21 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
         && !hasPermission('manage_users') && !hasRole('admin')) {
       return <Navigate to="/issues" replace />;
     }
+
+    // Redirect from issues page if user doesn't have view_issues permission
+    if (location.pathname === '/issues' && !hasPermission('view_issues') && !hasRole('admin')) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    
+    // Redirect from new issue page if user doesn't have create_issue permission
+    if (location.pathname === '/issues/new' && !hasPermission('create_issue') && !hasRole('admin')) {
+      return <Navigate to="/issues" replace />;
+    }
+    
+    // Redirect from issue detail if user doesn't have view_issues permission
+    if (location.pathname.startsWith('/issues/') && !hasPermission('view_issues') && !hasRole('admin')) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // Role check for protected routes

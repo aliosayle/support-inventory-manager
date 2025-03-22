@@ -1,15 +1,29 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Issue } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import IssueForm from '@/components/issues/IssueForm';
 import { toast } from '@/components/ui/use-toast';
 import { mapIssueToDbIssue } from '@/utils/dataMapping';
+import { useAuth } from '@/context/AuthContext';
 
 const NewIssue = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const { hasRole, hasPermission } = useAuth();
+
+  // Redirect if user doesn't have permission to create issues
+  useEffect(() => {
+    if (!hasRole(['admin']) && !hasPermission('create_issue')) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create issues.",
+        variant: "destructive",
+      });
+      navigate('/issues');
+    }
+  }, [hasRole, hasPermission, navigate]);
 
   const handleSubmit = async (issueData: Partial<Issue>) => {
     setIsLoading(true);

@@ -7,12 +7,26 @@ import { toast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mapDbIssues } from '@/utils/dataMapping';
+import { useNavigate } from 'react-router-dom';
 
 const Issues = () => {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentTab, setCurrentTab] = useState('mine'); // Default to 'mine' for regular users
+
+  // Check if user has permission to view issues
+  useEffect(() => {
+    if (!hasRole(['admin']) && !hasPermission('view_issues')) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to view issues.",
+        variant: "destructive",
+      });
+      navigate('/dashboard');
+    }
+  }, [hasRole, hasPermission, navigate]);
 
   // Set default tab based on user role
   useEffect(() => {

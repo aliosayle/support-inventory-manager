@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   // Define links with required permissions
   const links = [
     { to: '/dashboard', icon: BarChart, label: 'Dashboard', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin', 'employee'] as UserRole[] },
-    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] as UserRole[] },
+    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: 'view_issues' as Permission, requiredRoles: ['admin', 'employee', 'user'] as UserRole[] },
     { to: '/stock', icon: Package, label: 'Stock', requiredPermission: null, requiredRoles: ['admin', 'employee'] as UserRole[] },
     { to: '/users', icon: Users, label: 'Users', requiredPermission: 'manage_users' as Permission, requiredRoles: ['admin'] as UserRole[] },
     { to: '/reports', icon: BarChart, label: 'Reports', requiredPermission: 'view_reports' as Permission, requiredRoles: ['admin'] as UserRole[] },

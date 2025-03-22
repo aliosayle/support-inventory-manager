@@ -21,7 +21,8 @@ export type Permission =
   | 'approve_purchase_request'
   | 'reject_purchase_request'
   | 'view_reports'
-  | 'manage_users';
+  | 'manage_users'
+  | 'view_issues';
 
 export interface User {
   id: string;
