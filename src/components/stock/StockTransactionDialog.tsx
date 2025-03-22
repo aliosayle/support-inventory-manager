@@ -72,7 +72,8 @@ export function StockTransactionDialog({
 }: StockTransactionDialogProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   
   const form = useForm<StockTransactionFormValues>({
     resolver: zodResolver(stockTransactionSchema),
@@ -85,14 +86,20 @@ export function StockTransactionDialog({
 
   useEffect(() => {
     async function loadUsers() {
-      const usersList = await fetchUsers();
-      setUsers(usersList);
+      if (isOpen && transactionType === 'out') {
+        const usersList = await fetchUsers();
+        setUsers(usersList || []);
+      }
     }
     
-    if (isOpen && transactionType === 'out') {
-      loadUsers();
-    }
+    loadUsers();
   }, [isOpen, transactionType]);
+
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    (user.department && user.department.toLowerCase().includes(userSearchTerm.toLowerCase()))
+  );
 
   const onSubmit = async (data: StockTransactionFormValues) => {
     if (!stockItem) return;
@@ -163,13 +170,13 @@ export function StockTransactionDialog({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Assign To *</FormLabel>
-                    <Popover open={open} onOpenChange={setOpen}>
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={open}
+                            aria-expanded={popoverOpen}
                             className={cn(
                               "w-full justify-between",
                               !field.value && "text-muted-foreground"
@@ -184,30 +191,36 @@ export function StockTransactionDialog({
                       </PopoverTrigger>
                       <PopoverContent className="w-[350px] p-0">
                         <Command>
-                          <CommandInput placeholder="Search user..." />
+                          <CommandInput 
+                            placeholder="Search user..." 
+                            value={userSearchTerm}
+                            onValueChange={setUserSearchTerm}
+                          />
                           <CommandEmpty>No user found.</CommandEmpty>
-                          <CommandGroup className="max-h-[300px] overflow-y-auto">
-                            {users.map((user) => (
-                              <CommandItem
-                                key={user.id}
-                                value={user.id}
-                                onSelect={(value) => {
-                                  form.setValue("assignedTo", value);
-                                  setOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    user.id === field.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {user.name} {user.department ? `(${user.department})` : ''}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
+                          {users.length > 0 && (
+                            <CommandGroup className="max-h-[300px] overflow-y-auto">
+                              {filteredUsers.map((user) => (
+                                <CommandItem
+                                  key={user.id}
+                                  value={user.id}
+                                  onSelect={(value) => {
+                                    form.setValue("assignedTo", value);
+                                    setPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      user.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {user.name} {user.department ? `(${user.department})` : ''}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
                         </Command>
                       </PopoverContent>
                     </Popover>
