@@ -310,6 +310,7 @@ export type Database = {
           notes: string | null
           quantity: number
           stock_item_id: string
+          transaction_type: string
         }
         Insert: {
           assigned_to?: string | null
@@ -319,6 +320,7 @@ export type Database = {
           notes?: string | null
           quantity: number
           stock_item_id: string
+          transaction_type?: string
         }
         Update: {
           assigned_to?: string | null
@@ -328,6 +330,7 @@ export type Database = {
           notes?: string | null
           quantity?: number
           stock_item_id?: string
+          transaction_type?: string
         }
         Relationships: [
           {
