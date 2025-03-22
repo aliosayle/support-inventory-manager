@@ -19,6 +19,7 @@ export type Database = {
           id: string
           name: string
           password_hash: string
+          permissions: string[] | null
           phone_number: string | null
           role: string
           site: string | null
@@ -32,6 +33,7 @@ export type Database = {
           id?: string
           name: string
           password_hash: string
+          permissions?: string[] | null
           phone_number?: string | null
           role?: string
           site?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           name?: string
           password_hash?: string
+          permissions?: string[] | null
           phone_number?: string | null
           role?: string
           site?: string | null

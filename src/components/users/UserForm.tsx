@@ -81,6 +81,12 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
     
     await onSubmit(userData);
   };
+  
+  // This is the function we pass to UserPermissions that matches its expected signature
+  const handleSavePermissions = () => {
+    // We simulate a form submission event to reuse the same handler
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
 
   return (
     <Card>
@@ -227,7 +233,7 @@ const UserForm = ({ user, onSubmit, isLoading = false }: UserFormProps) => {
               userPermissions={permissions}
               onChange={setPermissions}
               onCancel={() => navigate(-1)}
-              onSave={handleSubmit}
+              onSave={handleSavePermissions}
               isLoading={isLoading}
             />
           </TabsContent>

@@ -164,6 +164,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         department: data.department,
         avatar: data.avatar,
         created_at: new Date(data.created_at),
+        permissions: data.permissions || [],
       });
       
       toast({

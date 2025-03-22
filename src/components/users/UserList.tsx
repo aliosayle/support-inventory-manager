@@ -1,27 +1,19 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+
 import { User } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Filter, MoreHorizontal, UserPlus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserListProps {
   users: User[];
@@ -29,158 +21,81 @@ interface UserListProps {
 }
 
 const UserList = ({ users, isLoading = false }: UserListProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const { hasRole, hasPermission } = useAuth();
+  const canEditUsers = hasRole('admin') || hasPermission('manage_users');
+  
+  if (isLoading) {
+    return <div>Loading users...</div>;
+  }
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
-  };
+  if (users.length === 0) {
+    return <div>No users found.</div>;
+  }
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      case 'employee': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'user': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default: return '';
+      case 'admin':
+        return 'bg-red-500';
+      case 'employee':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    }).format(new Date(date));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-10 w-[200px]" />
-          <Skeleton className="h-10 w-[100px]" />
-        </div>
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2">
-          <Input
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Button variant="outline" size="icon">
-            <Filter size={16} />
-          </Button>
-        </div>
-        <Button asChild>
-          <Link to="/users/new">
-            <UserPlus size={16} className="mr-2" />
-            Add User
-          </Link>
-        </Button>
-      </div>
-
-      <div className="rounded-md border shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden md:table-cell">Email</TableHead>
-              <TableHead className="hidden lg:table-cell">Department</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="hidden lg:table-cell">Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id} className="group">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div>{user.name}</div>
-                        <div className="text-xs text-muted-foreground md:hidden">
-                          {user.email}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {user.email}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {user.department || 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={cn("capitalize", getRoleBadgeColor(user.role))}
-                    >
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {formatDate(user.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/users/${user.id}`}>
-                            View Profile
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to={`/users/${user.id}/edit`}>
-                            Edit User
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>User</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Department</TableHead>
+          <TableHead>Company</TableHead>
+          <TableHead>Site</TableHead>
+          <TableHead>Phone</TableHead>
+          {canEditUsers && <TableHead className="text-right">Actions</TableHead>}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => (
+          <TableRow key={user.id}>
+            <TableCell>
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback>
+                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{user.name}</div>
+                  <div className="text-sm text-muted-foreground">{user.email}</div>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell>
+              <Badge className={getRoleBadgeColor(user.role)} variant="secondary">
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </Badge>
+            </TableCell>
+            <TableCell>{user.department || '-'}</TableCell>
+            <TableCell>{user.company || '-'}</TableCell>
+            <TableCell>{user.site || '-'}</TableCell>
+            <TableCell>{user.phoneNumber || '-'}</TableCell>
+            {canEditUsers && (
+              <TableCell className="text-right">
+                <Link to={`/users/${user.id}/edit`}>
+                  <Button size="sm" variant="ghost">
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </Link>
+              </TableCell>
             )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 

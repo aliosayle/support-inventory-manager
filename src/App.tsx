@@ -16,6 +16,7 @@ import NewStock from "./pages/stock/NewStock";
 import EditStock from "./pages/stock/EditStock";
 import Users from "./pages/users/Users";
 import NewUser from "./pages/users/NewUser";
+import EditUser from "./pages/users/EditUser";
 import Reports from "./pages/reports/Reports";
 import PurchaseRequests from "./pages/purchase/PurchaseRequests";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/stock/:id/edit" element={<EditStock />} />
               <Route path="/users" element={<Users />} />
               <Route path="/users/new" element={<NewUser />} />
+              <Route path="/users/:id/edit" element={<EditUser />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/purchase-requests" element={<PurchaseRequests />} />
             </Route>

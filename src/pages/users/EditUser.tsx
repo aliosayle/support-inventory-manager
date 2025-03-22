@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User } from '@/types';
+import { User, UserRole, Permission } from '@/types';
 import UserForm from '@/components/users/UserForm';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,7 +47,7 @@ const EditUser = () => {
             id: data.id,
             name: data.name,
             email: data.email,
-            role: data.role,
+            role: data.role as UserRole, // Type cast here
             department: data.department,
             company: data.company,
             site: data.site,
