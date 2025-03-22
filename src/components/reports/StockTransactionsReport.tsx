@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Chart,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -78,7 +76,6 @@ export function StockTransactionsReport() {
     to: new Date(),
   });
   
-  // Fetch stock transactions with related data
   const { data: transactions = [], isLoading } = useQuery<StockTransaction[]>({
     queryKey: ['stockTransactions', dateRange],
     queryFn: async () => {
@@ -122,7 +119,6 @@ export function StockTransactionsReport() {
     staleTime: 300000, // 5 minutes
   });
   
-  // Prepare data for the transactions by date chart
   const transactionsByDate = transactions.reduce((acc: Record<string, TransactionsByDateData>, transaction) => {
     const dateStr = format(transaction.date, 'MMM dd');
     
@@ -140,13 +136,11 @@ export function StockTransactionsReport() {
   }, {});
   
   const transactionsByDateData = Object.values(transactionsByDate).sort((a, b) => {
-    // Convert MMM dd to a sortable date format
     const dateA = new Date(a.date.replace(/^(\w{3}) (\d{2})$/, `$1 $2 ${new Date().getFullYear()}`));
     const dateB = new Date(b.date.replace(/^(\w{3}) (\d{2})$/, `$1 $2 ${new Date().getFullYear()}`));
     return dateA.getTime() - dateB.getTime();
   });
   
-  // Prepare data for the transactions by category chart
   const transactionsByCategory = transactions.reduce((acc: Record<string, TransactionsByCategoryData>, transaction) => {
     const category = transaction.category;
     
@@ -165,19 +159,16 @@ export function StockTransactionsReport() {
   
   const transactionsByCategoryData = Object.values(transactionsByCategory);
   
-  // Calculate totals
   const totalIn = transactions.filter(t => t.transactionType === 'in')
     .reduce((sum, t) => sum + t.quantity, 0);
   
   const totalOut = transactions.filter(t => t.transactionType === 'out')
     .reduce((sum, t) => sum + t.quantity, 0);
 
-  // Handle time range selection
   const handleTimeRangeChange = (value: string) => {
     const newTimeRange = value as TimeRange;
     setTimeRange(newTimeRange);
     
-    // Update date range based on selection
     if (newTimeRange === '7days') {
       setDateRange({
         from: subDays(new Date(), 7),
