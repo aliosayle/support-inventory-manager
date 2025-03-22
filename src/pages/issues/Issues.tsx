@@ -89,12 +89,15 @@ const Issues = () => {
     staleTime: 60000, // 1 minute
   });
 
+  // Determine if user can see all issues
+  const canSeeAllIssues = hasRole(['admin']) || hasPermission('view_issues');
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Issues</h1>
         <p className="text-muted-foreground">
-          {hasRole(['admin']) || hasPermission('view_issues') 
+          {canSeeAllIssues 
             ? 'Manage and track all IT support issues.'
             : hasRole(['employee'])
               ? 'View and manage your assigned issues.'
@@ -111,7 +114,7 @@ const Issues = () => {
         setStatusFilter={setStatusFilter}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        canSeeAllIssues={hasRole(['admin']) || hasPermission('view_issues')}
+        canSeeAllIssues={canSeeAllIssues}
       />
     </div>
   );

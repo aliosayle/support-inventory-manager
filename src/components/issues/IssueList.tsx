@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Issue, IssueStatus, User } from '@/types';
@@ -51,6 +50,7 @@ interface IssueListProps {
   setStatusFilter: (status: string) => void;
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  canSeeAllIssues: boolean;
 }
 
 const getStatusColor = (status: IssueStatus) => {
@@ -76,12 +76,12 @@ const IssueList: React.FC<IssueListProps> = ({
   statusFilter, 
   setStatusFilter, 
   currentTab, 
-  setCurrentTab 
+  setCurrentTab,
+  canSeeAllIssues 
 }) => {
   const { user, hasRole, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   
-  // Fetch employees with React Query
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
@@ -118,7 +118,6 @@ const IssueList: React.FC<IssueListProps> = ({
         description: `Issue status changed to ${newStatus}`,
       });
       
-      // Let React Query handle the cache invalidation
       await queryClient.invalidateQueries({ queryKey: ['issues'] });
       
     } catch (error) {
@@ -150,7 +149,6 @@ const IssueList: React.FC<IssueListProps> = ({
         description: `Issue assigned to ${assignedEmployee?.name || 'employee'} and marked as in-progress`,
       });
       
-      // Let React Query handle the cache invalidation
       await queryClient.invalidateQueries({ queryKey: ['issues'] });
       
     } catch (error) {
@@ -163,7 +161,6 @@ const IssueList: React.FC<IssueListProps> = ({
     }
   };
 
-  // Filter issues based on search, status, and tab
   const filteredIssues = issues.filter(issue => {
     const matchesSearch = searchQuery === '' || 
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -171,7 +168,6 @@ const IssueList: React.FC<IssueListProps> = ({
     
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
     
-    // Filter based on current tab
     const matchesTab = currentTab === 'all' || 
       (currentTab === 'mine' && issue.submittedBy === user?.id) ||
       (currentTab === 'assigned' && issue.assignedTo === user?.id);
@@ -207,7 +203,6 @@ const IssueList: React.FC<IssueListProps> = ({
             </SelectContent>
           </Select>
           
-          {/* Only show the New Issue button if user has permission */}
           {(hasRole(['admin']) || hasPermission('create_issue')) && (
             <Button asChild>
               <Link to="/issues/new">
@@ -221,7 +216,7 @@ const IssueList: React.FC<IssueListProps> = ({
       
       <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab}>
         <TabsList>
-          {hasRole(['admin']) && <TabsTrigger value="all">All Issues</TabsTrigger>}
+          {canSeeAllIssues && <TabsTrigger value="all">All Issues</TabsTrigger>}
           <TabsTrigger value="mine">My Issues</TabsTrigger>
           {hasRole(['admin', 'employee']) && (
             <TabsTrigger value="assigned">Assigned to Me</TabsTrigger>
@@ -314,7 +309,6 @@ const renderIssueList = (
                     <Link to={`/issues/${issue.id}`}>View Details</Link>
                   </DropdownMenuItem>
                   
-                  {/* Only show status change options for users with proper permissions */}
                   {(isAdmin || 
                     (isEmployee && issue.submittedBy !== userId) || 
                     hasPermission?.('resolve_issue')
@@ -337,7 +331,6 @@ const renderIssueList = (
                     </>
                   )}
                   
-                  {/* Only show assign functionality for admins or users with assign_issue permission */}
                   {(isAdmin || hasPermission?.('assign_issue')) && (
                     <>
                       <DropdownMenuSeparator />
