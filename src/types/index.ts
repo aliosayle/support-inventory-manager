@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'employee' | 'user';
 
 export type IssueSeverity = 'low' | 'medium' | 'high';
@@ -7,6 +6,22 @@ export type IssueStatus = 'submitted' | 'in-progress' | 'resolved' | 'escalated'
 export type StockStatus = 'available' | 'in-use' | 'repair' | 'disposed';
 export type PurchaseRequestStatus = 'pending' | 'approved' | 'purchased' | 'rejected';
 export type StockTransactionType = 'in' | 'out';
+
+export type Permission = 
+  | 'create_issue' 
+  | 'edit_issue' 
+  | 'delete_issue'
+  | 'assign_issue'
+  | 'resolve_issue'
+  | 'create_stock' 
+  | 'edit_stock' 
+  | 'delete_stock'
+  | 'manage_stock_transactions'
+  | 'create_purchase_request'
+  | 'approve_purchase_request'
+  | 'reject_purchase_request'
+  | 'view_reports'
+  | 'manage_users';
 
 export interface User {
   id: string;
@@ -18,6 +33,7 @@ export interface User {
   site?: string;
   phoneNumber?: string;
   avatar?: string;
+  permissions?: Permission[];
   createdAt: Date;
 }
 

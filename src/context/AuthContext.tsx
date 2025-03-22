@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserRole } from '@/types';
+import { UserRole, Permission } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
 interface UserProfile {
@@ -9,6 +9,7 @@ interface UserProfile {
   name: string;
   email: string;
   role: UserRole;
+  permissions?: Permission[];
   department?: string;
   avatar?: string;
   created_at: Date;
@@ -23,6 +24,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
+  hasPermission: (permissions: Permission | Permission[]) => boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -35,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   isAuthenticated: false,
   hasRole: () => false,
+  hasPermission: () => false,
   refreshProfile: async () => {},
 });
 
@@ -85,6 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           department: data.department,
           avatar: data.avatar,
           created_at: new Date(data.created_at),
+          permissions: data.permissions || [],
         });
       }
     } catch (err) {
@@ -291,6 +295,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return user.role === roles;
   };
 
+  // Helper to check if user has a specific permission
+  const hasPermission = (permissions: Permission | Permission[]): boolean => {
+    if (!user) return false;
+    
+    // Admin role has all permissions by default
+    if (user.role === 'admin') return true;
+    
+    // Check specific permissions
+    if (!user.permissions) return false;
+    
+    if (Array.isArray(permissions)) {
+      return permissions.some(permission => user.permissions?.includes(permission));
+    }
+    
+    return user.permissions.includes(permissions);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -301,6 +322,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       logout,
       isAuthenticated: !!user,
       hasRole,
+      hasPermission,
       refreshProfile,
     }}>
       {children}

@@ -9,12 +9,12 @@ import { useAuth } from '@/context/AuthContext';
 
 const NewUser = () => {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { hasRole, hasPermission } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if not admin or employee
+  // Redirect if not admin or doesn't have manage_users permission
   useEffect(() => {
-    if (!hasRole(['admin', 'employee'])) {
+    if (!hasRole('admin') && !hasPermission('manage_users')) {
       toast({
         title: "Access Denied",
         description: "You don't have permission to create users.",
@@ -22,7 +22,7 @@ const NewUser = () => {
       });
       navigate('/dashboard');
     }
-  }, [hasRole, navigate]);
+  }, [hasRole, hasPermission, navigate]);
 
   const handleSubmit = async (userData: Partial<User> & { password?: string }) => {
     setIsLoading(true);
@@ -43,7 +43,8 @@ const NewUser = () => {
           department: userData.department,
           company: userData.company,
           site: userData.site,
-          phone_number: userData.phoneNumber
+          phone_number: userData.phoneNumber,
+          permissions: userData.permissions || []
         });
       
       if (error) {
