@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, LineChart, PieChart, Activity, TrendingUp, FileBarChart } from "lucide-react";
+import { BarChart, LineChart, PieChart, Activity, TrendingUp, FileBarChart, PackageCheck } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   BarChart as RechartsBarChart, 
@@ -19,6 +18,7 @@ import {
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { StockTransactionsReport } from '@/components/reports/StockTransactionsReport';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -75,18 +75,15 @@ const Reports = () => {
         
         if (error) throw error;
         
-        // Format data for chart
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const currentYear = new Date().getFullYear();
         
-        // If no data, create empty data structure
         if (!data || data.length === 0) {
           return months.map((name, index) => ({ name, count: 0, month: index + 1 }));
         }
         
-        // Format data from database
         return data.map((item: IssueByMonth) => ({
-          name: months[item.month - 1], // Convert month number to name
+          name: months[item.month - 1],
           count: typeof item.count === 'number' ? item.count : parseInt(String(item.count)),
           month: item.month
         }));
@@ -95,7 +92,7 @@ const Reports = () => {
         return [];
       }
     },
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000,
   });
   
   // Fetch issues by type data
@@ -107,7 +104,6 @@ const Reports = () => {
         
         if (error) throw error;
         
-        // Format data for chart
         if (!data || data.length === 0) {
           return [];
         }
@@ -121,7 +117,7 @@ const Reports = () => {
         return [];
       }
     },
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000,
   });
   
   // Fetch resolution time data
@@ -133,7 +129,6 @@ const Reports = () => {
         
         if (error) throw error;
         
-        // Format data for chart
         if (!data || data.length === 0) {
           return Array.from({ length: 8 }, (_, i) => ({ 
             name: `Week ${i + 1}`, 
@@ -152,7 +147,7 @@ const Reports = () => {
         return [];
       }
     },
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000,
   });
   
   // Fetch issues stats
@@ -190,12 +185,11 @@ const Reports = () => {
         };
       }
     },
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000,
   });
   
   const isLoading = isLoadingMonthly || isLoadingTypes || isLoadingResolution || isLoadingStats;
   
-  // Provide default stats object to avoid undefined errors
   const stats = issueStats || { 
     total_issues: 0, 
     open_issues: 0, 
@@ -221,6 +215,10 @@ const Reports = () => {
           <TabsTrigger value="issues" className="flex items-center gap-2">
             <FileBarChart size={16} />
             <span>Issues</span>
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <PackageCheck size={16} />
+            <span>Inventory</span>
           </TabsTrigger>
           <TabsTrigger value="trends" className="flex items-center gap-2">
             <TrendingUp size={16} />
@@ -383,6 +381,10 @@ const Reports = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="inventory" className="space-y-4">
+          <StockTransactionsReport />
         </TabsContent>
         
         <TabsContent value="trends" className="space-y-4">
