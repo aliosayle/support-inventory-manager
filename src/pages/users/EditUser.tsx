@@ -43,6 +43,13 @@ const EditUser = () => {
         }
         
         if (data) {
+          // Validate that permissions are of the correct type
+          const validPermissions = data.permissions 
+            ? (data.permissions as string[]).filter(perm => 
+                Object.values(Permission).includes(perm as Permission)
+              ) as Permission[]
+            : [];
+            
           setUser({
             id: data.id,
             name: data.name,
@@ -53,7 +60,7 @@ const EditUser = () => {
             site: data.site,
             phoneNumber: data.phone_number,
             avatar: data.avatar,
-            permissions: data.permissions || [],
+            permissions: validPermissions,
             createdAt: new Date(data.created_at)
           });
         }
