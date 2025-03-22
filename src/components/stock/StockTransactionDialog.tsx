@@ -24,21 +24,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { recordStockTransaction, fetchUsers } from '@/services/stockService';
-import { Loader2, Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -72,8 +66,7 @@ export function StockTransactionDialog({
 }: StockTransactionDialogProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   
   const form = useForm<StockTransactionFormValues>({
     resolver: zodResolver(stockTransactionSchema),
@@ -87,8 +80,13 @@ export function StockTransactionDialog({
   useEffect(() => {
     async function loadUsers() {
       if (isOpen && transactionType === 'out') {
-        const usersList = await fetchUsers();
-        setUsers(usersList || []);
+        try {
+          const usersList = await fetchUsers();
+          setUsers(usersList || []);
+        } catch (error) {
+          console.error('Error loading users:', error);
+          setUsers([]);
+        }
       }
     }
     
@@ -96,9 +94,9 @@ export function StockTransactionDialog({
   }, [isOpen, transactionType]);
 
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-    (user.department && user.department.toLowerCase().includes(userSearchTerm.toLowerCase()))
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.department && user.department.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const onSubmit = async (data: StockTransactionFormValues) => {
@@ -170,60 +168,33 @@ export function StockTransactionDialog({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Assign To *</FormLabel>
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={popoverOpen}
-                            className={cn(
-                              "w-full justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? users.find((user) => user.id === field.value)?.name
-                              : "Select a user"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[350px] p-0">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search user..." 
-                            value={userSearchTerm}
-                            onValueChange={setUserSearchTerm}
-                          />
-                          <CommandEmpty>No user found.</CommandEmpty>
-                          {users.length > 0 && (
-                            <CommandGroup className="max-h-[300px] overflow-y-auto">
-                              {filteredUsers.map((user) => (
-                                <CommandItem
-                                  key={user.id}
-                                  value={user.id}
-                                  onSelect={(value) => {
-                                    form.setValue("assignedTo", value);
-                                    setPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      user.id === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {user.name} {user.department ? `(${user.department})` : ''}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a user" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <Input 
+                          placeholder="Search..." 
+                          className="mb-2" 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        {filteredUsers.length === 0 ? (
+                          <p className="text-center py-2 text-sm text-muted-foreground">No users found</p>
+                        ) : (
+                          filteredUsers.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name} {user.department ? `(${user.department})` : ''}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
