@@ -64,36 +64,32 @@ const SidebarItem = ({ to, icon: Icon, label, isOpen }: SidebarItemProps) => {
 };
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
-  const { hasRole, logout } = useAuth();
+  const { hasRole, hasPermission, logout } = useAuth();
   
-  const adminLinks = [
-    { to: '/dashboard', icon: BarChart, label: 'Dashboard' },
-    { to: '/issues', icon: ClipboardList, label: 'Issues' },
-    { to: '/stock', icon: Package, label: 'Stock' },
-    { to: '/users', icon: Users, label: 'Users' },
-    { to: '/reports', icon: BarChart, label: 'Reports' },
-    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests' },
+  // Define links with required permissions
+  const links = [
+    { to: '/dashboard', icon: BarChart, label: 'Dashboard', requiredPermission: 'view_reports', requiredRoles: ['admin', 'employee'] },
+    { to: '/issues', icon: ClipboardList, label: 'Issues', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] },
+    { to: '/stock', icon: Package, label: 'Stock', requiredPermission: null, requiredRoles: ['admin', 'employee'] },
+    { to: '/users', icon: Users, label: 'Users', requiredPermission: 'manage_users', requiredRoles: ['admin'] },
+    { to: '/reports', icon: BarChart, label: 'Reports', requiredPermission: 'view_reports', requiredRoles: ['admin'] },
+    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests', requiredPermission: null, requiredRoles: ['admin', 'employee', 'user'] },
   ];
   
-  const employeeLinks = [
-    { to: '/dashboard', icon: BarChart, label: 'Dashboard' },
-    { to: '/issues', icon: ClipboardList, label: 'Issues' },
-    { to: '/stock', icon: Package, label: 'Stock' },
-    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests' },
-  ];
-  
-  const userLinks = [
-    { to: '/issues', icon: ClipboardList, label: 'Issues' },
-    { to: '/purchase-requests', icon: ShoppingCart, label: 'Purchase Requests' },
-  ];
-  
-  let links = userLinks;
-  
-  if (hasRole('admin')) {
-    links = adminLinks;
-  } else if (hasRole('employee')) {
-    links = employeeLinks;
-  }
+  // Filter links based on user permissions and roles
+  const filteredLinks = links.filter(link => {
+    // Check if user has the required permission (if specified)
+    const hasRequiredPermission = link.requiredPermission 
+      ? hasPermission(link.requiredPermission) 
+      : true;
+      
+    // Check if user has one of the required roles
+    const hasRequiredRole = link.requiredRoles 
+      ? link.requiredRoles.some(role => hasRole(role))
+      : true;
+      
+    return hasRequiredPermission && hasRequiredRole;
+  });
 
   return (
     <aside 
@@ -111,7 +107,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </div>
       <nav className="flex-1 py-6 px-3 overflow-y-auto">
         <ul className="space-y-2">
-          {links.map((link) => (
+          {filteredLinks.map((link) => (
             <SidebarItem 
               key={link.to} 
               to={link.to} 

@@ -13,7 +13,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps) => {
-  const { isAuthenticated, hasRole, isLoading, user } = useAuth();
+  const { isAuthenticated, hasRole, hasPermission, isLoading, user } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
@@ -52,15 +52,31 @@ const MainLayout = ({ requireAuth = true, requiredRoles = [] }: MainLayoutProps)
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }
 
-  // Role-based redirect for specific pages
-  if (user && user.role === 'user') {
-    // Regular users shouldn't access dashboard, redirect to issues
-    if (location.pathname === '/dashboard') {
+  // Permission-based redirects
+  if (user) {
+    // Redirect from dashboard if user doesn't have view_reports permission
+    if (location.pathname === '/dashboard' && !hasPermission('view_reports') && !hasRole('admin')) {
       return <Navigate to="/issues" replace />;
     }
     
-    // Regular users shouldn't access reports
-    if (location.pathname === '/reports') {
+    // Redirect from reports if user doesn't have view_reports permission
+    if (location.pathname === '/reports' && !hasPermission('view_reports') && !hasRole('admin')) {
+      return <Navigate to="/issues" replace />;
+    }
+    
+    // Redirect from users if user doesn't have manage_users permission
+    if (location.pathname === '/users' && !hasPermission('manage_users') && !hasRole('admin')) {
+      return <Navigate to="/issues" replace />;
+    }
+    
+    // Redirect from new user form if user doesn't have manage_users permission
+    if (location.pathname === '/users/new' && !hasPermission('manage_users') && !hasRole('admin')) {
+      return <Navigate to="/issues" replace />;
+    }
+    
+    // Redirect from edit user form if user doesn't have manage_users permission
+    if (location.pathname.startsWith('/users/') && location.pathname.includes('/edit') 
+        && !hasPermission('manage_users') && !hasRole('admin')) {
       return <Navigate to="/issues" replace />;
     }
   }
