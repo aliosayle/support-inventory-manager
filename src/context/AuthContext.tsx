@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, Permission } from '@/types';
@@ -60,9 +61,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const validatePermissions = (permissions: string[] | null): Permission[] => {
     if (!permissions) return [];
-    return permissions.filter(perm => {
-      return Object.values(Permission).includes(perm as Permission);
-    }) as Permission[];
+    
+    // Define the valid permission values based on the Permission enum
+    const validPermissionValues = [
+      'create_issue', 'edit_issue', 'delete_issue', 'assign_issue', 'resolve_issue',
+      'create_stock', 'edit_stock', 'delete_stock', 'manage_stock_transactions', 
+      'create_purchase_request', 'approve_purchase_request', 'reject_purchase_request',
+      'view_reports', 'manage_users'
+    ];
+    
+    // Filter the permissions to only include valid ones
+    return permissions.filter(perm => 
+      validPermissionValues.includes(perm)
+    ) as Permission[];
   };
 
   const refreshProfile = async () => {
@@ -282,8 +293,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const hasPermission = (permissions: Permission | Permission[]): boolean => {
     if (!user) return false;
     
+    // Admins have all permissions
     if (user.role === 'admin') return true;
     
+    // If user has no permissions defined
     if (!user.permissions) return false;
     
     if (Array.isArray(permissions)) {

@@ -54,13 +54,17 @@ interface PurchaseRequestListProps {
   showActions?: boolean;
   onStatusChange?: () => void;
   filterStatus?: PurchaseRequestStatus;
+  canApprove?: boolean;
+  canReject?: boolean;
 }
 
 const PurchaseRequestList = ({ 
   limit, 
   showActions = false, 
   onStatusChange,
-  filterStatus 
+  filterStatus,
+  canApprove = false,
+  canReject = false 
 }: PurchaseRequestListProps) => {
   const { user, hasRole } = useAuth();
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
@@ -115,7 +119,18 @@ const PurchaseRequestList = ({
   }, [user, hasRole, limit, filterStatus]);
 
   const handleStatusChange = async (id: string, status: PurchaseRequestStatus) => {
-    if (!hasRole('admin')) return;
+    // Only allow if user has admin role or appropriate permissions
+    if (!hasRole('admin') && 
+        ((status === 'approved' && !canApprove) || 
+         (status === 'rejected' && !canReject) || 
+         (status === 'purchased' && !canApprove))) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to perform this action",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setUpdating(id);
     try {
@@ -238,30 +253,34 @@ const PurchaseRequestList = ({
                 </div>
               )}
               
-              {showActions && hasRole('admin') && request.status === 'pending' && (
+              {showActions && request.status === 'pending' && (
                 <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="border-green-500 text-green-700 hover:bg-green-50"
-                    disabled={!!updating}
-                    onClick={() => handleStatusChange(request.id, 'approved')}
-                  >
-                    {updating === request.id ? 'Updating...' : 'Approve'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="border-red-500 text-red-700 hover:bg-red-50"
-                    disabled={!!updating}
-                    onClick={() => handleStatusChange(request.id, 'rejected')}
-                  >
-                    {updating === request.id ? 'Updating...' : 'Reject'}
-                  </Button>
+                  {canApprove && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="border-green-500 text-green-700 hover:bg-green-50"
+                      disabled={!!updating}
+                      onClick={() => handleStatusChange(request.id, 'approved')}
+                    >
+                      {updating === request.id ? 'Updating...' : 'Approve'}
+                    </Button>
+                  )}
+                  {canReject && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="border-red-500 text-red-700 hover:bg-red-50"
+                      disabled={!!updating}
+                      onClick={() => handleStatusChange(request.id, 'rejected')}
+                    >
+                      {updating === request.id ? 'Updating...' : 'Reject'}
+                    </Button>
+                  )}
                 </div>
               )}
               
-              {showActions && hasRole('admin') && request.status === 'approved' && (
+              {showActions && request.status === 'approved' && canApprove && (
                 <div className="flex gap-2 mt-4">
                   <Button 
                     variant="outline" 

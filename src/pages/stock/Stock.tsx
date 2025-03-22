@@ -8,14 +8,19 @@ import StockList from '@/components/stock/StockList';
 import { fetchStockItems } from '@/services/stockService';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { StockTransactionDialog } from '@/components/stock/StockTransactionDialog';
+import { useAuth } from '@/context/AuthContext';
 
 const Stock = () => {
+  const { hasPermission } = useAuth();
   const [items, setItems] = useState<StockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in');
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+
+  const canCreateStock = hasPermission('create_stock');
+  const canManageTransactions = hasPermission('manage_stock_transactions');
 
   const loadStockItems = async () => {
     setIsLoading(true);
@@ -32,12 +37,14 @@ const Stock = () => {
   }, []);
 
   const handleStockIn = (item: StockItem) => {
+    if (!canManageTransactions) return;
     setSelectedItem(item);
     setTransactionType('in');
     setIsTransactionDialogOpen(true);
   };
 
   const handleStockOut = (item: StockItem) => {
+    if (!canManageTransactions) return;
     setSelectedItem(item);
     setTransactionType('out');
     setIsTransactionDialogOpen(true);
@@ -66,12 +73,14 @@ const Stock = () => {
               <List size={16} />
             </ToggleGroupItem>
           </ToggleGroup>
-          <Button asChild>
-            <Link to="/stock/new">
-              <Plus size={16} className="mr-2" />
-              Add Item
-            </Link>
-          </Button>
+          {canCreateStock && (
+            <Button asChild>
+              <Link to="/stock/new">
+                <Plus size={16} className="mr-2" />
+                Add Item
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -81,15 +90,18 @@ const Stock = () => {
         viewMode={viewMode} 
         onStockIn={handleStockIn}
         onStockOut={handleStockOut}
+        canManageTransactions={canManageTransactions}
       />
 
-      <StockTransactionDialog
-        stockItem={selectedItem}
-        transactionType={transactionType}
-        isOpen={isTransactionDialogOpen}
-        onClose={() => setIsTransactionDialogOpen(false)}
-        onSuccess={handleTransactionSuccess}
-      />
+      {canManageTransactions && (
+        <StockTransactionDialog
+          stockItem={selectedItem}
+          transactionType={transactionType}
+          isOpen={isTransactionDialogOpen}
+          onClose={() => setIsTransactionDialogOpen(false)}
+          onSuccess={handleTransactionSuccess}
+        />
+      )}
     </div>
   );
 };

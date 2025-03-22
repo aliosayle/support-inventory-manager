@@ -6,12 +6,17 @@ import PurchaseRequestForm from '@/components/purchase-request/PurchaseRequestFo
 import PurchaseRequestList from '@/components/purchase-request/PurchaseRequestList';
 
 const PurchaseRequests = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, hasPermission } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   
   const handleStatusChange = () => {
     setRefreshKey(prev => prev + 1);
   };
+  
+  const canCreateRequest = hasPermission('create_purchase_request');
+  const canApproveRequest = hasPermission('approve_purchase_request');
+  const canRejectRequest = hasPermission('reject_purchase_request');
+  const canManageAllRequests = hasRole('admin') || (canApproveRequest && canRejectRequest);
   
   return (
     <div className="space-y-6">
@@ -25,8 +30,8 @@ const PurchaseRequests = () => {
       <Tabs defaultValue="requests" className="space-y-4">
         <TabsList>
           <TabsTrigger value="requests">My Requests</TabsTrigger>
-          <TabsTrigger value="new">New Request</TabsTrigger>
-          {hasRole('admin') && (
+          {canCreateRequest && <TabsTrigger value="new">New Request</TabsTrigger>}
+          {canManageAllRequests && (
             <TabsTrigger value="all">All Requests</TabsTrigger>
           )}
         </TabsList>
@@ -35,16 +40,20 @@ const PurchaseRequests = () => {
           <PurchaseRequestList key={`my-requests-${refreshKey}`} />
         </TabsContent>
         
-        <TabsContent value="new">
-          <PurchaseRequestForm />
-        </TabsContent>
+        {canCreateRequest && (
+          <TabsContent value="new">
+            <PurchaseRequestForm />
+          </TabsContent>
+        )}
         
-        {hasRole('admin') && (
+        {canManageAllRequests && (
           <TabsContent value="all" className="space-y-4">
             <PurchaseRequestList 
               key={`all-requests-${refreshKey}`} 
               showActions 
               onStatusChange={handleStatusChange}
+              canApprove={canApproveRequest}
+              canReject={canRejectRequest}
             />
           </TabsContent>
         )}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { User, UserRole, Permission } from '@/types';
@@ -43,10 +42,18 @@ const EditUser = () => {
         }
         
         if (data) {
+          // Define the valid permission values based on the Permission enum
+          const validPermissionValues = [
+            'create_issue', 'edit_issue', 'delete_issue', 'assign_issue', 'resolve_issue',
+            'create_stock', 'edit_stock', 'delete_stock', 'manage_stock_transactions', 
+            'create_purchase_request', 'approve_purchase_request', 'reject_purchase_request',
+            'view_reports', 'manage_users'
+          ];
+          
           // Validate that permissions are of the correct type
           const validPermissions = data.permissions 
             ? (data.permissions as string[]).filter(perm => 
-                Object.values(Permission).includes(perm as Permission)
+                validPermissionValues.includes(perm)
               ) as Permission[]
             : [];
             

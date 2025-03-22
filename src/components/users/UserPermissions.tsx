@@ -113,8 +113,7 @@ const UserPermissions = ({
               <Checkbox 
                 id={`group-${index}`}
                 checked={isGroupFullySelected(group)}
-                // We can't use the indeterminate property directly since it's not supported
-                // Instead we'll visually style it with CSS classes when needed
+                // Instead of indeterminate, use a CSS class for styling
                 className={isGroupPartiallySelected(group) ? "opacity-90" : ""}
                 onCheckedChange={checked => handleSelectAll(group, !!checked)}
               />
