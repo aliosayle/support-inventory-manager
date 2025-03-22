@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StockItem } from '@/types';
-import { Edit, Eye, Filter, MoreHorizontal, Package, Plus, Trash2 } from 'lucide-react';
+import { Edit, Eye, Filter, MoreHorizontal, Package, Plus, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -36,9 +36,17 @@ interface StockListProps {
   items: StockItem[];
   isLoading?: boolean;
   viewMode?: 'card' | 'list';
+  onStockIn?: (item: StockItem) => void;
+  onStockOut?: (item: StockItem) => void;
 }
 
-const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListProps) => {
+const StockList = ({ 
+  items, 
+  isLoading = false, 
+  viewMode = 'card',
+  onStockIn,
+  onStockOut
+}: StockListProps) => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -254,6 +262,20 @@ const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListPro
                             Edit
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onStockIn?.(item)}
+                          disabled={!onStockIn}
+                        >
+                          <ArrowDown className="mr-2 h-4 w-4" />
+                          Stock In
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onStockOut?.(item)}
+                          disabled={!onStockOut || item.quantity <= 0}
+                        >
+                          <ArrowUp className="mr-2 h-4 w-4" />
+                          Stock Out
+                        </DropdownMenuItem>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -295,6 +317,28 @@ const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListPro
                     <div className="text-muted-foreground">Purchased:</div>
                     <div className="text-right font-medium">{formatDate(item.purchaseDate)}</div>
                   </div>
+                  {(onStockIn || onStockOut) && (
+                    <div className="flex justify-between gap-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => onStockIn?.(item)}
+                        disabled={!onStockIn}
+                      >
+                        <ArrowDown size={14} className="mr-1" /> In
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => onStockOut?.(item)}
+                        disabled={!onStockOut || item.quantity <= 0}
+                      >
+                        <ArrowUp size={14} className="mr-1" /> Out
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))
@@ -310,7 +354,7 @@ const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListPro
                 <TableHead>Status</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[180px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -344,6 +388,25 @@ const StockList = ({ items, isLoading = false, viewMode = 'card' }: StockListPro
                             <Edit size={16} />
                           </Link>
                         </Button>
+                        {onStockIn && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => onStockIn(item)}
+                          >
+                            <ArrowDown size={16} />
+                          </Button>
+                        )}
+                        {onStockOut && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => onStockOut(item)}
+                            disabled={item.quantity <= 0}
+                          >
+                            <ArrowUp size={16} />
+                          </Button>
+                        )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon">

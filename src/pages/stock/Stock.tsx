@@ -2,30 +2,51 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { StockItem } from '@/types';
-import { Grid, List, Plus } from 'lucide-react';
+import { Grid, List, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StockList from '@/components/stock/StockList';
 import { fetchStockItems } from '@/services/stockService';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { StockTransactionDialog } from '@/components/stock/StockTransactionDialog';
 
 const Stock = () => {
   const [items, setItems] = useState<StockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
+  const [transactionType, setTransactionType] = useState<'in' | 'out'>('in');
+  const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+
+  const loadStockItems = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchStockItems();
+      setItems(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadStockItems = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchStockItems();
-        setItems(data);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadStockItems();
   }, []);
+
+  const handleStockIn = (item: StockItem) => {
+    setSelectedItem(item);
+    setTransactionType('in');
+    setIsTransactionDialogOpen(true);
+  };
+
+  const handleStockOut = (item: StockItem) => {
+    setSelectedItem(item);
+    setTransactionType('out');
+    setIsTransactionDialogOpen(true);
+  };
+
+  const handleTransactionSuccess = () => {
+    setIsTransactionDialogOpen(false);
+    loadStockItems();
+  };
 
   return (
     <div className="space-y-4">
@@ -54,7 +75,21 @@ const Stock = () => {
         </div>
       </div>
 
-      <StockList items={items} isLoading={isLoading} viewMode={viewMode} />
+      <StockList 
+        items={items} 
+        isLoading={isLoading} 
+        viewMode={viewMode} 
+        onStockIn={handleStockIn}
+        onStockOut={handleStockOut}
+      />
+
+      <StockTransactionDialog
+        stockItem={selectedItem}
+        transactionType={transactionType}
+        isOpen={isTransactionDialogOpen}
+        onClose={() => setIsTransactionDialogOpen(false)}
+        onSuccess={handleTransactionSuccess}
+      />
     </div>
   );
 };

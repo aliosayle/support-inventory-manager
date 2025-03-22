@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { StockItem } from "@/types";
-import { mapDbStockItemToStockItem, mapDbStockItems } from "@/utils/dataMapping";
+import { StockItem, StockUsage, StockTransactionType } from "@/types";
+import { mapDbStockItemToStockItem, mapDbStockItems, mapDbStockUsageToStockUsage } from "@/utils/dataMapping";
 import { toast } from "sonner";
 
 // Fetch all stock items
@@ -131,5 +131,129 @@ export async function deleteStockItem(id: string) {
     console.error('Error deleting stock item:', error);
     toast.error('Failed to delete item');
     return false;
+  }
+}
+
+// Record stock transaction (in/out)
+export async function recordStockTransaction(
+  stockItemId: string,
+  quantity: number,
+  transactionType: StockTransactionType,
+  assignedTo?: string,
+  notes?: string,
+  issueId?: string
+) {
+  try {
+    // Begin transaction by updating the stock item quantity
+    const { data: stockItem, error: fetchError } = await supabase
+      .from('stock_items')
+      .select('quantity')
+      .eq('id', stockItemId)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    let newQuantity: number;
+    if (transactionType === 'in') {
+      newQuantity = stockItem.quantity + quantity;
+    } else {
+      // For 'out' transactions
+      if (stockItem.quantity < quantity) {
+        throw new Error('Not enough items in stock');
+      }
+      newQuantity = stockItem.quantity - quantity;
+    }
+    
+    // Update stock item quantity
+    const { error: updateError } = await supabase
+      .from('stock_items')
+      .update({ quantity: newQuantity })
+      .eq('id', stockItemId);
+    
+    if (updateError) throw updateError;
+    
+    // Record the transaction in stock_usage
+    const stockUsage = {
+      stock_item_id: stockItemId,
+      quantity: quantity,
+      assigned_to: assignedTo || null,
+      notes: notes || null,
+      issue_id: issueId || null,
+      transaction_type: transactionType
+    };
+    
+    const { error: usageError } = await supabase
+      .from('stock_usage')
+      .insert(stockUsage);
+    
+    if (usageError) throw usageError;
+    
+    toast.success(transactionType === 'in' 
+      ? `Added ${quantity} items to inventory` 
+      : `Removed ${quantity} items from inventory`);
+    
+    return true;
+  } catch (error: any) {
+    console.error('Error recording stock transaction:', error);
+    toast.error(error.message || 'Failed to process stock transaction');
+    return false;
+  }
+}
+
+// Fetch stock usage history for an item
+export async function fetchStockUsageHistory(stockItemId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('stock_usage')
+      .select(`
+        *,
+        user:assigned_to (
+          name,
+          email
+        )
+      `)
+      .eq('stock_item_id', stockItemId)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    return data.map((usage: any) => ({
+      id: usage.id,
+      stockItemId: usage.stock_item_id,
+      issueId: usage.issue_id,
+      quantity: usage.quantity,
+      assignedTo: usage.assigned_to,
+      date: new Date(usage.date),
+      notes: usage.notes,
+      transactionType: usage.transaction_type,
+      assignedToName: usage.user?.name
+    }));
+  } catch (error: any) {
+    console.error('Error fetching stock usage history:', error);
+    toast.error('Failed to load usage history');
+    return [];
+  }
+}
+
+// Fetch users for assignment
+export async function fetchUsers() {
+  try {
+    const { data, error } = await supabase
+      .from('custom_users')
+      .select('id, name, email, department')
+      .order('name');
+    
+    if (error) throw error;
+    
+    return data.map((user: any) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      department: user.department
+    }));
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    toast.error('Failed to load users');
+    return [];
   }
 }

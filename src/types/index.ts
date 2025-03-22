@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'employee' | 'user';
 
 export type IssueSeverity = 'low' | 'medium' | 'high';
@@ -5,6 +6,7 @@ export type IssueType = 'hardware' | 'software' | 'network';
 export type IssueStatus = 'submitted' | 'in-progress' | 'resolved' | 'escalated';
 export type StockStatus = 'available' | 'in-use' | 'repair' | 'disposed';
 export type PurchaseRequestStatus = 'pending' | 'approved' | 'purchased' | 'rejected';
+export type StockTransactionType = 'in' | 'out';
 
 export interface User {
   id: string;
@@ -67,6 +69,8 @@ export interface StockUsage {
   assignedTo?: string; // User ID
   date: Date;
   notes?: string;
+  transactionType: StockTransactionType;
+  assignedToName?: string; // Added to display the name of the recipient
 }
 
 export interface IssueStockItem {

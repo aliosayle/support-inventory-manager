@@ -95,7 +95,9 @@ export const mapDbStockUsageToStockUsage = (dbStockUsage: any): StockUsage => {
     quantity: dbStockUsage.quantity,
     assignedTo: dbStockUsage.assigned_to,
     date: new Date(dbStockUsage.date),
-    notes: dbStockUsage.notes
+    notes: dbStockUsage.notes,
+    transactionType: dbStockUsage.transaction_type || 'out',
+    assignedToName: dbStockUsage.user?.name
   };
 };
 
