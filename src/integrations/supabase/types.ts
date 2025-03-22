@@ -334,6 +334,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "stock_usage_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "custom_users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_usage_issue_id_fkey"
             columns: ["issue_id"]
             isOneToOne: false
