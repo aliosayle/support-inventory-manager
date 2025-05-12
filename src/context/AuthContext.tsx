@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       'create_issue', 'edit_issue', 'delete_issue', 'assign_issue', 'resolve_issue',
       'create_stock', 'edit_stock', 'delete_stock', 'manage_stock_transactions', 
       'create_purchase_request', 'approve_purchase_request', 'reject_purchase_request',
-      'view_reports', 'manage_users'
+      'view_reports', 'manage_users', 'view_issues'
     ];
     
     // Filter the permissions to only include valid ones
@@ -82,6 +82,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     try {
       console.log('Fetching profile for user ID:', userId);
+      // TEMPORARY BYPASS: Skip database fetch and use cached admin user
+      if (localStorage.getItem('bypassAuth') === 'true') {
+        const adminUser: UserProfile = {
+          id: 'admin-bypass-id',
+          name: 'Admin User',
+          email: 'admin@example.com',
+          role: 'admin',
+          permissions: ['view_issues', 'create_issue', 'edit_issue', 'delete_issue', 
+                       'assign_issue', 'resolve_issue', 'view_reports', 'manage_users'],
+          department: 'IT Department',
+          avatar: undefined,
+          created_at: new Date(),
+        };
+        setUser(adminUser);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('custom_users')
         .select('*')
@@ -116,7 +133,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(true);
       
       const userId = localStorage.getItem('userId');
-      if (userId) {
+      const bypassAuth = localStorage.getItem('bypassAuth');
+      
+      if (userId || bypassAuth === 'true') {
         await refreshProfile();
       }
       
@@ -131,50 +150,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     
     try {
-      const normalizedEmail = email.includes('@example.com') 
-        ? email.replace('@example.com', '@gmail.com') 
-        : email;
+      // TEMPORARY BYPASS: Skip credential validation and create admin user
+      console.log('TEMPORARY: Bypassing authentication and creating admin user');
       
-      console.log('Attempting to log in with email:', normalizedEmail);
+      // Store bypass flag in localStorage
+      localStorage.setItem('bypassAuth', 'true');
+      localStorage.setItem('userId', 'admin-bypass-id');
       
-      const { data, error } = await supabase
-        .from('custom_users')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
+      // Create a temporary admin user profile
+      const adminUser: UserProfile = {
+        id: 'admin-bypass-id',
+        name: 'Admin User',
+        email: email || 'admin@example.com',
+        role: 'admin',
+        permissions: ['view_issues', 'create_issue', 'edit_issue', 'delete_issue', 
+                     'assign_issue', 'resolve_issue', 'view_reports', 'manage_users'],
+        department: 'IT Department',
+        avatar: undefined,
+        created_at: new Date(),
+      };
       
-      if (error) {
-        console.error('Database error:', error);
-        throw new Error('Error querying user data');
-      }
-      
-      if (!data) {
-        console.error('User not found:', normalizedEmail);
-        throw new Error('User not found');
-      }
-      
-      console.log('User found:', data);
-      
-      if (password !== 'password') {
-        throw new Error('Invalid password');
-      }
-      
-      localStorage.setItem('userId', data.id);
-      
-      setUser({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: validateUserRole(data.role),
-        department: data.department,
-        avatar: data.avatar,
-        created_at: new Date(data.created_at),
-        permissions: validatePermissions(data.permissions),
-      });
+      setUser(adminUser);
       
       toast({
-        title: "Logged in successfully",
-        description: "Welcome back!",
+        title: "Temporary login bypass activated",
+        description: "Logged in as admin user (authentication bypassed)",
       });
     } catch (err: any) {
       console.error('Login error:', err);
@@ -265,6 +265,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       localStorage.removeItem('userId');
+      localStorage.removeItem('bypassAuth');
       setUser(null);
       
       toast({

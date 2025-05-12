@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const Index = () => {
   const { login, isAuthenticated } = useAuth();
@@ -25,12 +27,8 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      // Handle demo emails
-      const normalizedEmail = email.includes('@example.com') 
-        ? email.replace('@example.com', '@gmail.com') 
-        : email;
-        
-      await login(normalizedEmail, password);
+      // TEMPORARY: The bypassed login will accept any credentials
+      await login(email || 'admin@example.com', password || 'password');
       navigate('/dashboard');
     } catch (error) {
       // Error already handled in auth context
@@ -44,57 +42,10 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      // For demo purposes, directly set these values
+      // TEMPORARY: Just use the bypass login with the selected demo credentials
       setEmail(email);
-      setPassword('password'); // All demo users have password='password'
-      
-      // Check if demo user already exists
-      const normalizedEmail = email.replace('@example.com', '@gmail.com');
-      
-      const { data: existingUser } = await supabase
-        .from('custom_users')
-        .select('id')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-        
-      if (!existingUser) {
-        console.log('Demo user does not exist, creating:', email);
-        
-        // Create the demo user if it doesn't exist
-        const passwordHash = '$2a$10$b8Ycw7tIHgsfoLHyYQ.YaOG45hR1askYWQuALEbTZ9bR6T1qsQzLa'; // Pretend hash of 'password'
-        
-        const { error } = await supabase
-          .from('custom_users')
-          .insert({
-            email: normalizedEmail,
-            password_hash: passwordHash,
-            name,
-            role,
-            department
-          });
-          
-        if (error) {
-          console.error('Error creating demo user:', error);
-          throw new Error(`Failed to create demo user: ${error.message}`);
-        }
-        
-        console.log('Demo user created successfully');
-      } else {
-        console.log('Demo user already exists:', existingUser);
-      }
-      
-      // Now try to log in
-      try {
-        await login(normalizedEmail, 'password');
-        navigate('/dashboard');
-      } catch (loginError) {
-        console.error('Error logging in with demo user:', loginError);
-        toast({
-          title: "Demo Login Error",
-          description: "Could not log in with the demo account. Please try again.",
-          variant: "destructive",
-        });
-      }
+      await login(email, 'password');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error("Error with demo user:", error);
       toast({
@@ -112,8 +63,17 @@ const Index = () => {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 tracking-tight">IT Support Manager</h1>
-          <p className="text-muted-foreground">Login to access the dashboard</p>
+          <p className="text-muted-foreground">
+            Login to access the dashboard
+          </p>
         </div>
+        
+        <Alert variant="warning" className="mb-6 bg-yellow-50 text-yellow-800 border-yellow-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>TEMPORARY AUTH BYPASS ACTIVE</strong>: Any credentials will work, no validation needed.
+          </AlertDescription>
+        </Alert>
         
         <div className="space-y-6 bg-card rounded-lg border p-6 shadow-sm">
           <form onSubmit={handleLogin} className="space-y-4">
@@ -122,10 +82,9 @@ const Index = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Enter any email (optional)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
             
@@ -134,15 +93,14 @@ const Index = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter any password (optional)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
               />
             </div>
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Logging in...' : 'Login (Bypassed)'}
             </Button>
           </form>
           
@@ -175,7 +133,7 @@ const Index = () => {
         </div>
         
         <p className="text-center text-sm text-muted-foreground mt-4">
-          For demo purposes, all accounts use the password "password".
+          <strong>Temporary Bypass Mode:</strong> Authentication checks are disabled.
         </p>
       </div>
     </div>
